@@ -87,12 +87,17 @@ func login(w http.ResponseWriter, r *http.Request) {
 func logout(w http.ResponseWriter, r *http.Request) {
 
 	query := `SELECT 
-		title AS "title",
-		text AS "text" 
-	FROM posts`
+		username AS "username"
+	FROM users`
 
-	js := JSONfromDB(query)
+	var posts struct {
+		Page  int           `json:"page"`
+		Posts []interface{} `json:"post"`
+	}
 
-	returnJSON(js, w)
+	posts.Page = 1
+	posts.Posts = JSONfromDB(query)
+
+	returnJSON(posts, w)
 
 }
