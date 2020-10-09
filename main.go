@@ -24,7 +24,13 @@ func main() {
 	// Our API endpoints
 	endpoint("/api/register", register)
 	endpoint("/api/login", login)
-	endpoint("/api/logout", logout, "secure")
+	endpoint("/api/logout", logout)
+
+	//TODO
+	// Write post (secure)
+	// Show posts with paginations (all, by user, by status, by dates, by category, by search pattern in title)
+	// Show full post with all comments 
+	// Write comment (secure)
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)
