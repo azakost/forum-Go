@@ -24,7 +24,7 @@ func main() {
 	// Our API endpoints
 	endpoint("/api/register", register)
 	endpoint("/api/login", login)
-	endpoint("/api/logout", logout)
+	endpoint("/api/logout", logout, "secure")
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)

@@ -16,25 +16,41 @@ CREATE TABLE users (
 	registered DATETIME DEFAULT CURRENT_TIMESTAMP,
 	username TEXT NOT NULL UNIQUE,
 	email TEXT NOT NULL UNIQUE,
-	password TEXT,
-	fullname TEXT,
-	language TEXT,
+	password TEXT NOT NULL,
+	fullname TEXT NOT NULL,
+	language TEXT NOT NULL DEFAULT 'en',
 	UNIQUE (username, email) );
+
+CREATE TABLE posts (
+	postId INTEGER PRIMARY KEY AUTOINCREMENT,
+	posted DATETIME DEFAULT CURRENT_TIMESTAMP,
+	userId INTEGER NOT NULL,
+	title TEXT NOT NULL,
+	text TEXT NOT NULL,
+	categories TEXT NOT NULL );
+	
+CREATE TABLE reactions (
+	reactionId INTEGER PRIMARY KEY AUTOINCREMENT,
+	reacted DATETIME DEFAULT CURRENT_TIMESTAMP,
+	postId INTEGER NOT NULL,
+	userId INTEGER NOT NULL,
+	reaction INTEGER NOT NULL );
+
+CREATE TABLE replies (
+	replyId INTEGER PRIMARY KEY AUTOINCREMENT,
+	replied DATETIME DEFAULT CURRENT_TIMESTAMP,
+	postId INTEGER NOT NULL,
+	userId INTEGER NOT NULL,
+	reply TEXT NOT NULL );	
+
 
 INSERT INTO users(email, username, password, fullname) 
 	values(
 		"azakost@gmail.com",
 		"azakost",
-		"123456",
+		"$2a$04$kitMig4Sfj/Id0C85pysxu3MQbFMC0qXDn5j4RA8ZoI8P9GMcE8Vm",
 		"Azamat Alimbayev"
 	);
 	
-CREATE TABLE posts (
-	postId INTEGER PRIMARY KEY AUTOINCREMENT,
-	posted DATETIME DEFAULT CURRENT_TIMESTAMP,
-	userId INTEGER,
-	title TEXT,
-	text TEXT );
-	
-	
+
 	`
