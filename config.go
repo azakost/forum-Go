@@ -87,7 +87,6 @@ INSERT INTO reactions(postId, userId, reaction)
 INSERT INTO reactions(postId, userId, reaction) 
 	values('1',	'2', '0');
 
-
 CREATE TABLE replies (
 	replyId INTEGER PRIMARY KEY AUTOINCREMENT,
 	replied DATETIME DEFAULT CURRENT_TIMESTAMP,

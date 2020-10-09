@@ -87,7 +87,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 func logout(w http.ResponseWriter, r *http.Request) {
 
 	query := `SELECT 
-		title AS "title" 
+		title AS "title",
+		text AS "text" 
 	FROM posts`
 
 	js := JSONfromDB(query)
