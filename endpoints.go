@@ -56,32 +56,35 @@ func login(w http.ResponseWriter, r *http.Request) {
 	structBody(r, &login)
 
 	// Get encrypted password from DB and user ID
-	query := `SELECT password as "password", userId as "userID" FROM users WHERE username = $1`
-	result := JSONfromDB(query, login.Username)
+	var creds []struct {
+		Password string
+		UserID   int64
+	}
+
+	query := `SELECT password, userId FROM users WHERE username = $1`
+	structFromDB(&creds, query, login.Username)
 
 	// If no such user in DB
-	if len(result) == 0 {
+	if len(creds) == 0 {
 		http.Error(w, http.StatusText(404), 404)
 		return
 	}
 
 	// If more than one username found - it would be a developer error
-	if len(result) > 1 {
+	if len(creds) > 1 {
 		log.Println("Server Error: Check DB for username dublication!")
 		http.Error(w, http.StatusText(500), 500)
 		return
 	}
 
 	// Check passwors
-	pass := result[0].(map[string]interface{})["password"].(string)
-	userID := result[0].(map[string]interface{})["userID"].(int64)
-	if !cryptIsValid(pass, login.Password) {
+	if !cryptIsValid(creds[0].Password, login.Password) {
 		http.Error(w, http.StatusText(403), 403)
 		return
 	}
 
 	// Set new JWT if password correct
-	setJWT(userID, w)
+	setJWT(creds[0].UserID, w)
 
 }
 
