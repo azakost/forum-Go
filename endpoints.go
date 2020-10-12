@@ -96,9 +96,8 @@ func logout(w http.ResponseWriter, r *http.Request) {
 		Username string
 		Fullname string
 	}
+	JSONfromDB3(&users, query)
 
-	usr := JSONfromDB3(users, query)
-
-	returnJSON(usr, w)
+	returnJSON(users, w)
 
 }

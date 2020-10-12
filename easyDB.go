@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"regexp"
@@ -153,7 +154,7 @@ func JSONfromDB2(model interface{}, query string, args ...interface{}) []interfa
 	return data
 }
 
-func JSONfromDB3(model interface{}, query string, args ...interface{}) []interface{} {
+func JSONfromDB3(model interface{}, query string, args ...interface{}) {
 	db, databaseError := sql.Open("sqlite3", dbname)
 	err(databaseError)
 	defer db.Close()
@@ -191,5 +192,5 @@ func JSONfromDB3(model interface{}, query string, args ...interface{}) []interfa
 		}
 		data = append(data, row.Interface())
 	}
-	return data
+	fmt.Println(data, reflect.ValueOf(model).Type().Elem())
 }
