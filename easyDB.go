@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"reflect"
 	"regexp"
@@ -112,8 +112,7 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-// Function for SELECT queries
-func JSONfromDB2(model interface{}, query string, args ...interface{}) []interface{} {
+func structFromDB(model interface{}, query string, args ...interface{}) {
 	db, databaseError := sql.Open("sqlite3", dbname)
 	err(databaseError)
 	defer db.Close()
@@ -128,7 +127,8 @@ func JSONfromDB2(model interface{}, query string, args ...interface{}) []interfa
 	defer rows.Close()
 
 	// get fields lenght
-	v := reflect.ValueOf(model)
+
+	v := reflect.Indirect(reflect.ValueOf(model)).Type().Elem()
 	len := v.NumField()
 
 	// Make range variables with pointer for rows.Scan function
@@ -145,52 +145,13 @@ func JSONfromDB2(model interface{}, query string, args ...interface{}) []interfa
 		err(scanError)
 
 		// Put values to map with string-keys
-		row := reflect.New(reflect.TypeOf(model))
+		row := reflect.New(v)
 		for i, t := range tmp {
 			row.Elem().Field(i).Set(reflect.ValueOf(t))
 		}
 		data = append(data, row.Interface())
 	}
-	return data
-}
-
-func JSONfromDB3(model interface{}, query string, args ...interface{}) {
-	db, databaseError := sql.Open("sqlite3", dbname)
-	err(databaseError)
-	defer db.Close()
-
-	// Prepare statement
-	statement, stmError := db.Prepare(query)
-	err(stmError)
-
-	// Get relevant rows by making query
-	rows, rowsError := statement.Query(args...)
-	err(rowsError)
-	defer rows.Close()
-
-	// get fields lenght
-	v := reflect.ValueOf(model).Type().Elem()
-	len := v.NumField()
-
-	// Make range variables with pointer for rows.Scan function
-	tmp := make([]interface{}, len)
-	dest := make([]interface{}, len)
-	for i := range tmp {
-		dest[i] = &tmp[i]
-	}
-
-	var data []interface{}
-	for rows.Next() {
-		// Get values from row
-		scanError := rows.Scan(dest...)
-		err(scanError)
-
-		// Put values to map with string-keys
-		row := reflect.New(reflect.ValueOf(model).Type().Elem())
-		for i, t := range tmp {
-			row.Elem().Field(i).Set(reflect.ValueOf(t))
-		}
-		data = append(data, row.Interface())
-	}
-	fmt.Println(data, reflect.ValueOf(model).Type().Elem())
+	mar, _ := json.Marshal(data)
+	unmarshalError := json.Unmarshal(mar, &model)
+	err(unmarshalError)
 }

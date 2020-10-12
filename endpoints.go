@@ -86,8 +86,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	// userID := fromCtx("userID", r)
-	// delete(sessions, userID)
+	userID := fromCtx("userID", r)
+	delete(sessions, userID)
 
 	query := `SELECT userId, username, fullname FROM users`
 
@@ -96,7 +96,8 @@ func logout(w http.ResponseWriter, r *http.Request) {
 		Username string
 		Fullname string
 	}
-	JSONfromDB3(&users, query)
+
+	structFromDB(&users, query)
 
 	returnJSON(users, w)
 
