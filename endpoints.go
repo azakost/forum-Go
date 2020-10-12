@@ -55,8 +55,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 	structBody(r, &login)
 
-	// Get encrypted password from DB
-	query := `SELECT password as "password" FROM users WHERE username = $1`
+	// Get encrypted password from DB and user ID
+	query := `SELECT password as "password", userId as "userID" FROM users WHERE username = $1`
 	result := JSONfromDB(query, login.Username)
 
 	// If no such user in DB
@@ -74,30 +74,31 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	// Check passwors
 	pass := result[0].(map[string]interface{})["password"].(string)
+	userID := result[0].(map[string]interface{})["userID"].(int64)
 	if !cryptIsValid(pass, login.Password) {
 		http.Error(w, http.StatusText(403), 403)
 		return
 	}
 
 	// Set new JWT if password correct
-	setJWT(login.Username, w)
+	setJWT(userID, w)
 
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
+	// userID := fromCtx("userID", r)
+	// delete(sessions, userID)
 
-	query := `SELECT 
-		username AS "username"
-	FROM users`
+	query := `SELECT userId, username, fullname FROM users`
 
-	var posts struct {
-		Page  int           `json:"page"`
-		Posts []interface{} `json:"post"`
+	var users []struct {
+		UserId   int64 `json:"userID"`
+		Username string
+		Fullname string
 	}
 
-	posts.Page = 1
-	posts.Posts = JSONfromDB(query)
+	usr := JSONfromDB3(users, query)
 
-	returnJSON(posts, w)
+	returnJSON(usr, w)
 
 }

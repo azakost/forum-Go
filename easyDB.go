@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -108,4 +109,87 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+// Function for SELECT queries
+func JSONfromDB2(model interface{}, query string, args ...interface{}) []interface{} {
+	db, databaseError := sql.Open("sqlite3", dbname)
+	err(databaseError)
+	defer db.Close()
+
+	// Prepare statement
+	statement, stmError := db.Prepare(query)
+	err(stmError)
+
+	// Get relevant rows by making query
+	rows, rowsError := statement.Query(args...)
+	err(rowsError)
+	defer rows.Close()
+
+	// get fields lenght
+	v := reflect.ValueOf(model)
+	len := v.NumField()
+
+	// Make range variables with pointer for rows.Scan function
+	tmp := make([]interface{}, len)
+	dest := make([]interface{}, len)
+	for i := range tmp {
+		dest[i] = &tmp[i]
+	}
+
+	var data []interface{}
+	for rows.Next() {
+		// Get values from row
+		scanError := rows.Scan(dest...)
+		err(scanError)
+
+		// Put values to map with string-keys
+		row := reflect.New(reflect.TypeOf(model))
+		for i, t := range tmp {
+			row.Elem().Field(i).Set(reflect.ValueOf(t))
+		}
+		data = append(data, row.Interface())
+	}
+	return data
+}
+
+func JSONfromDB3(model interface{}, query string, args ...interface{}) []interface{} {
+	db, databaseError := sql.Open("sqlite3", dbname)
+	err(databaseError)
+	defer db.Close()
+
+	// Prepare statement
+	statement, stmError := db.Prepare(query)
+	err(stmError)
+
+	// Get relevant rows by making query
+	rows, rowsError := statement.Query(args...)
+	err(rowsError)
+	defer rows.Close()
+
+	// get fields lenght
+	v := reflect.ValueOf(model).Type().Elem()
+	len := v.NumField()
+
+	// Make range variables with pointer for rows.Scan function
+	tmp := make([]interface{}, len)
+	dest := make([]interface{}, len)
+	for i := range tmp {
+		dest[i] = &tmp[i]
+	}
+
+	var data []interface{}
+	for rows.Next() {
+		// Get values from row
+		scanError := rows.Scan(dest...)
+		err(scanError)
+
+		// Put values to map with string-keys
+		row := reflect.New(reflect.ValueOf(model).Type().Elem())
+		for i, t := range tmp {
+			row.Elem().Field(i).Set(reflect.ValueOf(t))
+		}
+		data = append(data, row.Interface())
+	}
+	return data
 }

@@ -44,3 +44,10 @@ func returnJSON(d interface{}, w http.ResponseWriter) {
 	_, writeError := w.Write(js)
 	err(writeError)
 }
+
+func fromCtx(key ctxKey, r *http.Request) int64 {
+	if v := r.Context().Value(key); v != nil {
+		return v.(int64)
+	}
+	return 0
+}

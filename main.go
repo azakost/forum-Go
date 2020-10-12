@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 )
 
 func main() {
@@ -26,10 +29,16 @@ func main() {
 	endpoint("/api/login", login)
 	endpoint("/api/logout", logout)
 
+	var test []struct {
+		Username string
+	}
+
+	fmt.Println(reflect.ValueOf(test).Type().Elem().NumField())
+
 	//TODO
 	// Write post (secure)
 	// Show posts with paginations (all, by user, by status, by dates, by category, by search pattern in title)
-	// Show full post with all comments 
+	// Show full post with all comments
 	// Write comment (secure)
 
 	// Listen server
@@ -39,20 +48,41 @@ func main() {
 
 }
 
+type ctxKey string
+
 // Middleware handler
 func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), secure ...interface{}) {
+
 	fn := func(w http.ResponseWriter, r *http.Request) {
+
+		// Set headers for CORS enabling
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5000")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+		// Variable for passing username to context
+		var userID int64
+
+		// JWT validation handler
 		if len(secure) > 0 {
-			if !validateJWT(w, r) {
+
+			isValid, id := validateJWT(w, r)
+			if !isValid {
 				log.Println("User Error: JWT is not valid")
 				http.Error(w, http.StatusText(403), 403)
 				return
+			} else {
+				userID = id
 			}
 		}
+
+		// Save userID to context
+		var key ctxKey = "userID"
+		ctx := context.WithValue(r.Context(), key, userID)
+		req := r.WithContext(ctx)
+
+		// Error handler
 		defer func() {
 			if err := recover(); err != nil {
 				switch err.(type) {
@@ -65,7 +95,8 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 				}
 			}
 		}()
-		http.HandlerFunc(page).ServeHTTP(w, r)
+
+		http.HandlerFunc(page).ServeHTTP(w, req)
 	}
 	http.Handle(path, http.HandlerFunc(fn))
 }

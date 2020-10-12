@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -24,21 +25,21 @@ func cryptIsValid(crypt, data string) bool {
 	return e == nil
 }
 
-var sessions = make(map[string]string)
+var sessions = make(map[int64]string)
 
 type jwt struct {
-	Username string    `json:"username"`
-	Expire   time.Time `json:"expire"`
-	Token    string    `json:"token"`
+	UserID int64     `json:"userID"`
+	Expire time.Time `json:"expire"`
+	Token  string    `json:"token"`
 }
 
-func setJWT(username string, w http.ResponseWriter) {
+func setJWT(userID int64, w http.ResponseWriter) {
 	exp := time.Now().Add(tokenLife)
-	token := encrypt(username + exp.String())
+	token := encrypt(strconv.FormatInt(userID, 10) + exp.String())
 
 	var jTok jwt
 
-	jTok.Username = username
+	jTok.UserID = userID
 	jTok.Expire = exp
 	jTok.Token = token
 
@@ -57,50 +58,50 @@ func setJWT(username string, w http.ResponseWriter) {
 	val := base64.StdEncoding.EncodeToString([]byte(ciphertext))
 
 	// Write JWT to map
-	sessions[username] = token
+	sessions[userID] = token
 
 	// Add cookie
 	addCookie(w, "jwt", val, exp)
 }
 
-func validateJWT(w http.ResponseWriter, r *http.Request) bool {
+func validateJWT(w http.ResponseWriter, r *http.Request) (bool, int64) {
 
 	// Read Cookie
 	var jTok jwt
 	credsError := getCreds(&jTok, r)
 	if credsError != nil {
-		// addCookie(w, "jwt", "", time.Unix(0, 0))
-		return false
+		addCookie(w, "jwt", "", time.Unix(0, 0))
+		return false, 0
 	}
 
 	// Check if email exists in sessions map
-	val, ok := sessions[jTok.Username]
+	val, ok := sessions[jTok.UserID]
 
 	if !ok {
-		// addCookie(w, "jwt", "", time.Unix(0, 0))
-		return false
+		addCookie(w, "jwt", "", time.Unix(0, 0))
+		return false, 0
 	}
 
 	// Filter 1 - Stright token compare and fail if not equal
 
 	if val != jTok.Token {
-		// delete(sessions, jTok.Username)
-		// addCookie(w, "jwt", "", time.Unix(0, 0))
-		return false
+		delete(sessions, jTok.UserID)
+		addCookie(w, "jwt", "", time.Unix(0, 0))
+		return false, 0
 	}
 
 	// Filter 2 - If token is expired
 	if time.Now().After(jTok.Expire) {
-		delete(sessions, jTok.Username)
-		// addCookie(w, "jwt", "", time.Unix(0, 0))
-		return false
+		delete(sessions, jTok.UserID)
+		addCookie(w, "jwt", "", time.Unix(0, 0))
+		return false, 0
 	}
 
 	// Filter 3 - if token is more than 1 hour old - refresh it
 	if jTok.Expire.Before(time.Now().Add(tokenRefresh)) {
-		setJWT(jTok.Username, w)
+		setJWT(jTok.UserID, w)
 	}
-	return true
+	return true, jTok.UserID
 }
 
 func getCreds(model *jwt, r *http.Request) error {
