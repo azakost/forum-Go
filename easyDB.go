@@ -78,7 +78,6 @@ func structFromDB(model interface{}, query string, args ...interface{}) {
 	defer rows.Close()
 
 	// get fields lenght
-
 	v := reflect.Indirect(reflect.ValueOf(model)).Type().Elem()
 	len := v.NumField()
 
@@ -95,13 +94,15 @@ func structFromDB(model interface{}, query string, args ...interface{}) {
 		scanError := rows.Scan(dest...)
 		err(scanError)
 
-		// Put values to map with string-keys
+		// Put values to struct
 		row := reflect.New(v)
 		for i, t := range tmp {
 			row.Elem().Field(i).Set(reflect.ValueOf(t))
 		}
 		data = append(data, row.Interface())
 	}
+
+	// Later find a better solution for this shit
 	mar, _ := json.Marshal(data)
 	unmarshalError := json.Unmarshal(mar, &model)
 	err(unmarshalError)
