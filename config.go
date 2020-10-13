@@ -70,7 +70,7 @@ INSERT INTO posts(userId, title, text, categories)
 		'1',
 		'The best title ever!',
 		'This is a very long text written for testing purposes!',
-		'1,2'
+		'"1","2"'
 	);
 		
 CREATE TABLE reactions (

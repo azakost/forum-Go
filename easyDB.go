@@ -106,3 +106,18 @@ func structFromDB(model interface{}, query string, args ...interface{}) {
 	unmarshalError := json.Unmarshal(mar, &model)
 	err(unmarshalError)
 }
+
+func isInDB(query string, data interface{}) bool {
+	db, databaseError := sql.Open("sqlite3", dbname)
+	err(databaseError)
+	defer db.Close()
+
+	queryError := db.QueryRow(query, data).Scan(&data)
+	if queryError != nil {
+		if queryError != sql.ErrNoRows {
+			panic(err)
+		}
+		return false
+	}
+	return true
+}

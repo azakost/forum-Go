@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"reflect"
 )
 
 func main() {
@@ -27,13 +25,10 @@ func main() {
 	// Our API endpoints
 	endpoint("/api/register", register)
 	endpoint("/api/login", login)
-	endpoint("/api/logout", logout)
-
-	var test []struct {
-		Username string
-	}
-
-	fmt.Println(reflect.ValueOf(test).Type().Elem().NumField())
+	endpoint("/api/logout", logout, "check JWT")
+	endpoint("/api/addpost", addpost, "check JWT")
+	endpoint("/api/updpost", updpost, "check JWT")
+	endpoint("/api/viewposts", viewposts)
 
 	//TODO
 	// Write post (secure)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"io/ioutil"
@@ -38,6 +39,12 @@ func (rep *report) errcheck(col string, err error, str string) {
 	}
 }
 
+func (rep *report) logcheck(col string, log bool) {
+	if log {
+		*rep = append(*rep, col)
+	}
+}
+
 func returnJSON(d interface{}, w http.ResponseWriter) {
 	js, jsonError := json.Marshal(d)
 	err(jsonError)
@@ -62,4 +69,20 @@ func addCookie(w http.ResponseWriter, name, value string, exp time.Time) {
 		Path:     "/",
 	}
 	http.SetCookie(w, &cookie)
+}
+
+func processCategories(validity *report, cats []int64) string {
+	validity.logcheck("too much cats", len(cats) > 3)
+	validity.logcheck("no cats", len(cats) == 0)
+	var strcats string
+	for _, cat := range cats {
+		check := "SELECT categoryId FROM categories WHERE categoryId = ?"
+		inDB := isInDB(check, cat)
+		if !inDB {
+			validity.logcheck("no such category!", true)
+			break
+		}
+		strcats += "\"" + strconv.FormatInt(cat, 10) + "\""
+	}
+	return strcats
 }
