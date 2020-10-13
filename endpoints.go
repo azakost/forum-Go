@@ -158,11 +158,12 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 func viewposts(w http.ResponseWriter, r *http.Request) {
 	var posts []struct {
 		PostID     int64
+		Username   string
 		Title      string
 		Text       string
 		Categories string
 	}
-	query := `SELECT postId, title, text, categories FROM posts`
+	query := `SELECT postId, title, text, categories FROM posts AS p INNER JOIN users AS u ON u.userId = p.userId`
 	structFromDB(&posts, query)
 
 	new := make([]struct {
