@@ -131,6 +131,7 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 		PostID     int64   `json:"postID"`
 		Title      string  `json:"title"`
 		Text       string  `json:"text"`
+		Status     int64   `json:"status"`
 		Categories []int64 `json:"categories"`
 	}
 	structBody(r, &post)
@@ -138,6 +139,7 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 	// Create validation report
 	var validity report
 	validity.regcheck("wrong title", post.Title, `^.{3,140}$`)
+	validity.logcheck("wrong status", post.Status > 2 || post.Status < 0)
 	cats := processCategories(&validity, post.Categories)
 
 	if len(validity) == 0 {
@@ -145,9 +147,10 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 		query := `UPDATE posts SET 
 			title = $1, 
 			text = $2, 
-			categories = $3 
-		WHERE postId = $4 AND userId = $5`
-		execQuery(query, post.Title, post.Text, cats, post.PostID, userID)
+			categories = $3,
+			status = $4 
+		WHERE postId = $5 AND userId = $6`
+		execQuery(query, post.Title, post.Text, cats, post.Status, post.PostID, userID)
 	} else {
 		log.Println("User Error: Post content is not valid!")
 		w.WriteHeader(400)
@@ -163,11 +166,25 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 		Text       string
 		Categories string
 	}
-	query := `SELECT postId, title, text, categories FROM posts AS p INNER JOIN users AS u ON u.userId = p.userId`
-	structFromDB(&posts, query)
+	cat := "%\"" + reqQuery("cat", r) + "\"%"
+	userID := reqQuery("userID", r)
+	search := "%" + reqQuery("search", r) + "%"
+	status := reqQuery("status", r)
+
+	query := `SELECT postId, u.username, title, text, categories 
+	FROM posts AS p 
+	INNER JOIN users AS u ON u.userId = p.userId
+	WHERE p.status > '0' 
+	AND p.categories LIKE $1 
+	AND p.userId LIKE $2 
+	AND p.title LIKE $3 
+	AND p.status LIKE $4 `
+
+	structFromDB(&posts, query, cat, userID, search, status)
 
 	new := make([]struct {
 		PostID     int64
+		Username   string
 		Title      string
 		Text       string
 		Categories []int64
@@ -179,6 +196,7 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 
 	for i, p := range posts {
 		new[i].PostID = p.PostID
+		new[i].Username = p.Username
 		new[i].Title = p.Title
 		new[i].Text = p.Text
 		cats := strings.FieldsFunc(p.Categories, fn)

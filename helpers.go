@@ -86,3 +86,12 @@ func processCategories(validity *report, cats []int64) string {
 	}
 	return strcats
 }
+
+func reqQuery(name string, r *http.Request) string {
+	switch len(r.FormValue(name)) {
+	case 0:
+		return "%"
+	default:
+		return r.FormValue(name)
+	}
+}

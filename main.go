@@ -31,10 +31,11 @@ func main() {
 	endpoint("/api/viewposts", viewposts)
 
 	//TODO
-	// Write post (secure)
-	// Show posts with paginations (all, by user, by status, by dates, by category, by search pattern in title)
+	// Show posts with paginations (//all, by //userID, by //status, by //category, by //search pattern in title)
 	// Show full post with all comments
 	// Write comment (secure)
+	// Post reaction (secure)
+	// 
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)
