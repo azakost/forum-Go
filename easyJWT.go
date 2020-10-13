@@ -133,14 +133,3 @@ func getCreds(model *jwt, r *http.Request) error {
 	}
 	return nil
 }
-
-func addCookie(w http.ResponseWriter, name, value string, exp time.Time) {
-	cookie := http.Cookie{
-		Name:     name,
-		Value:    value,
-		Expires:  exp,
-		HttpOnly: true,
-		Path:     "/",
-	}
-	http.SetCookie(w, &cookie)
-}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"time"
 
 	"io/ioutil"
 	"net/http"
@@ -50,4 +51,15 @@ func fromCtx(key ctxKey, r *http.Request) int64 {
 		return v.(int64)
 	}
 	return 0
+}
+
+func addCookie(w http.ResponseWriter, name, value string, exp time.Time) {
+	cookie := http.Cookie{
+		Name:     name,
+		Value:    value,
+		Expires:  exp,
+		HttpOnly: true,
+		Path:     "/",
+	}
+	http.SetCookie(w, &cookie)
 }

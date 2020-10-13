@@ -101,7 +101,6 @@ func structFromDB(model interface{}, query string, args ...interface{}) {
 		}
 		data = append(data, row.Interface())
 	}
-
 	// Later find a better solution for this shit
 	mar, _ := json.Marshal(data)
 	unmarshalError := json.Unmarshal(mar, &model)

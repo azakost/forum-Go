@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 )
 
 func register(w http.ResponseWriter, r *http.Request) {
@@ -91,17 +92,5 @@ func login(w http.ResponseWriter, r *http.Request) {
 func logout(w http.ResponseWriter, r *http.Request) {
 	userID := fromCtx("userID", r)
 	delete(sessions, userID)
-
-	query := `SELECT userId, username, fullname FROM users`
-
-	var users []struct {
-		UserId   int64 `json:"userID"`
-		Username string
-		Fullname string
-	}
-
-	structFromDB(&users, query)
-
-	returnJSON(users, w)
-
+	addCookie(w, "jwt", "", time.Unix(0, 0))
 }
