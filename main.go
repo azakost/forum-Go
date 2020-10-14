@@ -33,11 +33,10 @@ func main() {
 	endpoint("/api/readpost", readpost)
 
 	//TODO
-	// Show posts with paginations (//all, by //userID, by //status, by //category, by //search pattern in title)
-	// Show full post with all comments
+	// Pagination for viewposts
+	// Show comments by postID
 	// Write comment (secure)
 	// Post reaction (secure)
-	//
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)
