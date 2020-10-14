@@ -150,6 +150,9 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 }
 
 func viewposts(w http.ResponseWriter, r *http.Request) {
+
+	// TODO - PAGINATION!!!!!!!!!!!!!!!
+
 	var postsDB []struct {
 		PostID     int64
 		Posted     time.Time
@@ -278,5 +281,4 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 	postView.Reaction = postDB.Reaction
 	postView.Categories = getCatNames(postDB.Categories)
 	returnJSON(postView, w)
-
 }

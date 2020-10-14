@@ -100,18 +100,17 @@ INSERT INTO reactions(postId, userId, reaction)
 INSERT INTO reactions(postId, userId, reaction) 
 	values('2',	'2', '0');
 
-CREATE TABLE replies (
+CREATE TABLE comments (
 	replyId INTEGER PRIMARY KEY AUTOINCREMENT,
 	replied DATETIME DEFAULT CURRENT_TIMESTAMP,
 	postId INTEGER NOT NULL,
 	userId INTEGER NOT NULL,
 	reply TEXT NOT NULL );	
 
-INSERT INTO replies(postId, userId, reply) 
+INSERT INTO comments(postId, userId, reply) 
 	values('1',	'2', 'Sad! Not for udots!');
 
-INSERT INTO replies(postId, userId, reply) 
+INSERT INTO comments(postId, userId, reply) 
 	values('1',	'1', 'Best content!');
-
 
 `
