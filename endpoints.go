@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -60,35 +59,28 @@ func login(w http.ResponseWriter, r *http.Request) {
 	structBody(r, &login)
 
 	// Get encrypted password from DB and user ID
-	var creds []struct {
+	var creds struct {
 		Password string
 		UserID   int64
 	}
 
 	query := `SELECT password, userId FROM users WHERE username = $1`
-	structFromDB(&creds, query, login.Username)
+	structError := structFromDB(&creds, query, login.Username)
 
 	// If no such user in DB
-	if len(creds) == 0 {
+	if structError != nil {
 		http.Error(w, http.StatusText(404), 404)
 		return
 	}
 
-	// If more than one username found - it would be a developer error
-	if len(creds) > 1 {
-		log.Println("Server Error: Check DB for username dublication!")
-		http.Error(w, http.StatusText(500), 500)
-		return
-	}
-
 	// Check passwors
-	if !cryptIsValid(creds[0].Password, login.Password) {
+	if !cryptIsValid(creds.Password, login.Password) {
 		http.Error(w, http.StatusText(403), 403)
 		return
 	}
 
 	// Set new JWT if password correct
-	setJWT(creds[0].UserID, w)
+	setJWT(creds.UserID, w)
 
 }
 
@@ -180,19 +172,23 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	AND p.title LIKE $3 
 	AND p.status LIKE $4 `
 
-	structFromDB(&posts, query, cat, userID, search, status)
+	sliceFromDB(&posts, query, cat, userID, search, status)
 
 	new := make([]struct {
 		PostID     int64
 		Username   string
 		Title      string
 		Text       string
-		Categories []int64
+		Categories []string
 	}, len(posts))
 
 	fn := func(c rune) bool {
 		return !unicode.IsNumber(c)
 	}
+	var categ struct {
+		Name string
+	}
+	catQuery := `SELECT name FROM categories WHERE categoryId = ?`
 
 	for i, p := range posts {
 		new[i].PostID = p.PostID
@@ -201,10 +197,24 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 		new[i].Text = p.Text
 		cats := strings.FieldsFunc(p.Categories, fn)
 		for _, c := range cats {
-			id, _ := strconv.ParseInt(c, 10, 64)
-			new[i].Categories = append(new[i].Categories, id)
+			structError := structFromDB(&categ, catQuery, c)
+			err(structError)
+			new[i].Categories = append(new[i].Categories, categ.Name)
 		}
 	}
 
 	returnJSON(new, w)
+}
+
+func test(w http.ResponseWriter, r *http.Request) {
+
+	var user []struct {
+		UserID   int64
+		Username string
+	}
+
+	query := `SELECT userId, username FROM users WHERE userId = 5`
+	sliceFromDB(&user, query)
+	returnJSON(user, w)
+
 }

@@ -63,7 +63,7 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func structFromDB(model interface{}, query string, args ...interface{}) {
+func sliceFromDB(model interface{}, query string, args ...interface{}) {
 	db, databaseError := sql.Open("sqlite3", dbname)
 	err(databaseError)
 	defer db.Close()
@@ -99,12 +99,45 @@ func structFromDB(model interface{}, query string, args ...interface{}) {
 		for i, t := range tmp {
 			row.Elem().Field(i).Set(reflect.ValueOf(t))
 		}
+
 		data = append(data, row.Interface())
 	}
-	// Later find a better solution for this shit
+
+	// Need to find a better solution for this "Mashal-Unmarshal shit"
 	mar, _ := json.Marshal(data)
 	unmarshalError := json.Unmarshal(mar, &model)
 	err(unmarshalError)
+}
+
+func structFromDB(model interface{}, query string, args ...interface{}) error {
+	db, databaseError := sql.Open("sqlite3", dbname)
+	err(databaseError)
+	defer db.Close()
+	row := db.QueryRow(query, args...)
+	v := reflect.Indirect(reflect.ValueOf(model)).Type()
+	len := v.NumField()
+	tmp := make([]interface{}, len)
+	dest := make([]interface{}, len)
+	for i := range tmp {
+		dest[i] = &tmp[i]
+	}
+	scanError := row.Scan(dest...)
+	if scanError != nil {
+		if scanError == sql.ErrNoRows {
+			return scanError
+		}
+		panic(scanError)
+	}
+	col := reflect.Indirect(reflect.New(v))
+	for i, t := range tmp {
+		col.Field(i).Set(reflect.ValueOf(t))
+	}
+
+	// Need to find a better solution for this "Mashal-Unmarshal shit"
+	mar, _ := json.Marshal(col.Interface())
+	unmarshalError := json.Unmarshal(mar, &model)
+	err(unmarshalError)
+	return nil
 }
 
 func isInDB(query string, data interface{}) bool {

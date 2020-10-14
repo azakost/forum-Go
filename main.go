@@ -29,13 +29,15 @@ func main() {
 	endpoint("/api/addpost", addpost, "check JWT")
 	endpoint("/api/updpost", updpost, "check JWT")
 	endpoint("/api/viewposts", viewposts)
+	endpoint("/test", test)
+
 
 	//TODO
 	// Show posts with paginations (//all, by //userID, by //status, by //category, by //search pattern in title)
 	// Show full post with all comments
 	// Write comment (secure)
 	// Post reaction (secure)
-	// 
+	//
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)
