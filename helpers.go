@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"time"
+	"unicode"
 
 	"io/ioutil"
 	"net/http"
@@ -94,4 +95,32 @@ func reqQuery(name string, r *http.Request) string {
 	default:
 		return r.FormValue(name)
 	}
+}
+
+func getCatNames(c string) interface{} {
+
+	// Divide string to []string
+	cats := strings.FieldsFunc(c, func(c rune) bool {
+		return !unicode.IsNumber(c)
+	})
+
+	// Get all categories from DB
+	var categ []struct {
+		ID   int64
+		Name string
+	}
+	catQuery := `SELECT categoryId, name FROM categories`
+	sliceFromDB(&categ, catQuery)
+
+	var res []interface{}
+	for _, c := range cats {
+		for _, k := range categ {
+			id, _ := strconv.ParseInt(c, 10, 64)
+			if k.ID == id {
+				res = append(res, k)
+				break
+			}
+		}
+	}
+	return res
 }

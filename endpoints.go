@@ -1,11 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
-	"unicode"
 )
 
 func register(w http.ResponseWriter, r *http.Request) {
@@ -151,11 +150,15 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 }
 
 func viewposts(w http.ResponseWriter, r *http.Request) {
-	var posts []struct {
+	var postsDB []struct {
 		PostID     int64
+		Posted     time.Time
 		Username   string
 		Title      string
 		Text       string
+		Likes      int64
+		Dislikes   int64
+		Reaction   string
 		Categories string
 	}
 	cat := "%\"" + reqQuery("cat", r) + "\"%"
@@ -163,58 +166,117 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	search := "%" + reqQuery("search", r) + "%"
 	status := reqQuery("status", r)
 
-	query := `SELECT postId, u.username, title, text, categories 
+	query := `SELECT 
+		p.postId,
+		p.posted,
+		u.username, 
+		p.title, 
+		p.text,
+		COUNT(CASE WHEN r.reaction = 1 THEN 1 END),
+		COUNT(CASE WHEN r.reaction = 0 THEN 1 END),
+		(CASE WHEN p.userID = $1 THEN (CASE WHEN r.reaction = 1 THEN 'like' ELSE 'dislike' END) ELSE (CASE WHEN $1 = 0 THEN 'forbidden' ELSE 'idle' END) END),
+		categories
 	FROM posts AS p 
-	INNER JOIN users AS u ON u.userId = p.userId
+	LEFT JOIN reactions r ON r.postId = p.postId
+	INNER JOIN users u ON u.userId = p.userId
 	WHERE p.status > '0' 
-	AND p.categories LIKE $1 
-	AND p.userId LIKE $2 
-	AND p.title LIKE $3 
-	AND p.status LIKE $4 `
+	AND p.categories LIKE $2 
+	AND p.userId LIKE $3 
+	AND p.title LIKE $4 
+	AND p.status LIKE $5 `
 
-	sliceFromDB(&posts, query, cat, userID, search, status)
+	sliceFromDB(&postsDB, query, fromCtx("userID", r), cat, userID, search, status)
 
-	new := make([]struct {
+	postsView := make([]struct {
 		PostID     int64
+		Posted     int64
 		Username   string
 		Title      string
 		Text       string
-		Categories []string
-	}, len(posts))
+		Likes      int64
+		Dislikes   int64
+		Reaction   string
+		Categories interface{}
+	}, len(postsDB))
 
-	fn := func(c rune) bool {
-		return !unicode.IsNumber(c)
+	for i, p := range postsDB {
+		postsView[i].PostID = p.PostID
+		postsView[i].Posted = p.Posted.Unix()
+		postsView[i].Username = p.Username
+		postsView[i].Title = p.Title
+		postsView[i].Text = p.Text
+		postsView[i].Likes = p.Likes
+		postsView[i].Dislikes = p.Dislikes
+		postsView[i].Reaction = p.Reaction
+		postsView[i].Categories = getCatNames(p.Categories)
 	}
-	var categ struct {
-		Name string
-	}
-	catQuery := `SELECT name FROM categories WHERE categoryId = ?`
-
-	for i, p := range posts {
-		new[i].PostID = p.PostID
-		new[i].Username = p.Username
-		new[i].Title = p.Title
-		new[i].Text = p.Text
-		cats := strings.FieldsFunc(p.Categories, fn)
-		for _, c := range cats {
-			structError := structFromDB(&categ, catQuery, c)
-			err(structError)
-			new[i].Categories = append(new[i].Categories, categ.Name)
-		}
-	}
-
-	returnJSON(new, w)
+	returnJSON(postsView, w)
 }
 
-func test(w http.ResponseWriter, r *http.Request) {
+func readpost(w http.ResponseWriter, r *http.Request) {
 
-	var user []struct {
-		UserID   int64
-		Username string
+	userID := fromCtx("userID", r)
+	fmt.Println(userID)
+
+	var postDB struct {
+		PostID     int64
+		Posted     time.Time
+		Username   string
+		Title      string
+		Text       string
+		Likes      int64
+		Dislikes   int64
+		Reaction   string
+		Categories string
 	}
 
-	query := `SELECT userId, username FROM users WHERE userId = 5`
-	sliceFromDB(&user, query)
-	returnJSON(user, w)
+	query := `SELECT 
+		p.postId,
+		p.posted,
+		u.username, 
+		p.title, 
+		p.text,
+		COUNT(CASE WHEN r.reaction = 1 THEN 1 END),
+		COUNT(CASE WHEN r.reaction = 0 THEN 1 END),
+		(CASE WHEN p.userID = $1 THEN (CASE WHEN r.reaction = 1 THEN 'like' ELSE 'dislike' END) ELSE (CASE WHEN $1 = 0 THEN 'forbidden' ELSE 'idle' END) END),
+		categories
+	FROM posts AS p
+	LEFT JOIN reactions r ON r.postId = p.postId
+	INNER JOIN users u ON u.userId = p.userId
+	WHERE p.postId = $2`
+
+	post := r.FormValue("postID")
+	if post == "" {
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+
+	structError := structFromDB(&postDB, query, userID, post)
+	if structError != nil {
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+
+	var postView struct {
+		PostID     int64
+		Posted     int64
+		Username   string
+		Title      string
+		Text       string
+		Likes      int64
+		Dislikes   int64
+		Reaction   string
+		Categories interface{}
+	}
+
+	postView.PostID = postDB.PostID
+	postView.Posted = postDB.Posted.Unix()
+	postView.Username = postDB.Username
+	postView.Title = postDB.Title
+	postView.Likes = postDB.Likes
+	postView.Dislikes = postDB.Dislikes
+	postView.Reaction = postDB.Reaction
+	postView.Categories = getCatNames(postDB.Categories)
+	returnJSON(postView, w)
 
 }

@@ -72,13 +72,22 @@ INSERT INTO posts(userId, title, text, categories)
 		'This is a very long text written for testing purposes!',
 		'"1","2"'
 	);
+
+INSERT INTO posts(userId, title, text, categories) 
+	values(
+		'1',
+		'Hello!',
+		'sddsd',
+		'"2"'
+	);
 		
+
 CREATE TABLE reactions (
 	reactionId INTEGER PRIMARY KEY AUTOINCREMENT,
 	reacted DATETIME DEFAULT CURRENT_TIMESTAMP,
 	postId INTEGER NOT NULL,
 	userId INTEGER NOT NULL,
-	reaction INTEGER NOT NULL );
+	reaction INTEGER );
 
 
 INSERT INTO reactions(postId, userId, reaction) 
@@ -86,6 +95,9 @@ INSERT INTO reactions(postId, userId, reaction)
 
 INSERT INTO reactions(postId, userId, reaction) 
 	values('1',	'2', '0');
+
+INSERT INTO reactions(postId, userId, reaction) 
+	values('2',	'2', '0');
 
 CREATE TABLE replies (
 	replyId INTEGER PRIMARY KEY AUTOINCREMENT,

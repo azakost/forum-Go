@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 )
 
 func main() {
@@ -29,8 +30,7 @@ func main() {
 	endpoint("/api/addpost", addpost, "check JWT")
 	endpoint("/api/updpost", updpost, "check JWT")
 	endpoint("/api/viewposts", viewposts)
-	endpoint("/test", test)
-
+	endpoint("/api/readpost", readpost)
 
 	//TODO
 	// Show posts with paginations (//all, by //userID, by //status, by //category, by //search pattern in title)
@@ -59,33 +59,28 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
-		// Variable for passing username to context
-		var userID int64
+		isValid, id := validateJWT(w, r)
 
 		// JWT validation handler
-		if len(secure) > 0 {
-
-			isValid, id := validateJWT(w, r)
-			if !isValid {
-				log.Println("User Error: JWT is not valid")
-				http.Error(w, http.StatusText(403), 403)
-				return
-			} else {
-				userID = id
-			}
+		if len(secure) > 0 && !isValid {
+			log.Println("User Error: JWT is not valid")
+			http.Error(w, http.StatusText(403), 403)
+			return
 		}
 
 		// Save userID to context
 		var key ctxKey = "userID"
-		ctx := context.WithValue(r.Context(), key, userID)
+		ctx := context.WithValue(r.Context(), key, id)
 		req := r.WithContext(ctx)
 
 		// Error handler
 		defer func() {
 			if err := recover(); err != nil {
 				switch err.(type) {
+
+				case *reflect.ValueError:
+					http.Error(w, http.StatusText(404), 404)
 				case *json.SyntaxError:
-					log.Printf("User Error: %+v", err)
 					http.Error(w, http.StatusText(400), 400)
 				default:
 					log.Printf("Server Error: %+v", err)
