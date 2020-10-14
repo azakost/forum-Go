@@ -20,6 +20,7 @@ CREATE TABLE users (
 	password TEXT NOT NULL,
 	fullname TEXT NOT NULL,
 	language TEXT NOT NULL DEFAULT 'en',
+	status INTEGER NOT NULL DEFAULT 123,
 	UNIQUE (username, email) );
 
 INSERT INTO users(email, username, password, fullname) 
