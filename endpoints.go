@@ -316,10 +316,8 @@ func readcomments(w http.ResponseWriter, r *http.Request) {
 
 	query := `
 	SELECT 
-
-
-	FROM 
-	
+		commentId
+	FROM comments
 	`
 
 	sliceFromDB(&comments, query)
