@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -151,8 +152,22 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 
 func viewposts(w http.ResponseWriter, r *http.Request) {
 
-	// TODO - PAGINATION!!!!!!!!!!!!!!!
+	// Get request query params
+	cat := "%\"" + reqQuery("cat", r) + "\"%"
+	userID := reqQuery("userID", r)
+	search := "%" + reqQuery("search", r) + "%"
+	status := reqQuery("status", r)
+	logged := fromCtx("userID", r)
 
+	// Pagination params
+	pageSize := 10
+	page, atoiError := strconv.Atoi(r.FormValue("page"))
+	if atoiError != nil || page <= 0 {
+		page = 1
+	}
+	offset := page*pageSize - pageSize
+
+	// Select RAW slice data from DB
 	var postDB []struct {
 		PostID     int64
 		Posted     int64
@@ -164,13 +179,6 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 		Reaction   string
 		Categories string
 	}
-	cat := "%\"" + reqQuery("cat", r) + "\"%"
-	userID := reqQuery("userID", r)
-	search := "%" + reqQuery("search", r) + "%"
-	status := reqQuery("status", r)
-
-	logged := fromCtx("userID", r)
-
 	query := `
 	SELECT 
 		p.postId,
@@ -187,15 +195,16 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	AND p.categories LIKE $2 
 	AND p.userId LIKE $3 
 	AND p.title LIKE $4 
-	AND p.status LIKE $5
-	LIMIT 10 OFFSET 10`
-	sliceFromDB(&postDB, query, logged, cat, userID, search, status)
+	AND p.status LIKE $5 LIMIT $6 OFFSET $7`
+
+	sliceFromDB(&postDB, query, logged, cat, userID, search, status, pageSize, offset)
 
 	if len(postDB) == 0 {
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
 
+	// Copy slice from DB to new slice exept modified categories field
 	postView := make([]struct {
 		PostID     int64
 		Posted     int64
