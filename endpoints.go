@@ -302,7 +302,7 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 }
 
 func readcomments(w http.ResponseWriter, r *http.Request) {
-
+	userID := fromCtx("userID", r)
 	var comments []struct {
 		CommentID int64
 		Commented int64
@@ -312,14 +312,22 @@ func readcomments(w http.ResponseWriter, r *http.Request) {
 		Like      int64
 		Dislike   int64
 		Reaction  string
+		PostID    int64
 	}
-
 	query := `
 	SELECT 
-		commentId
-	FROM comments
+		commentId,
+		CAST(strftime('%s', commented) AS INT),
+		c.userId,
+		(SELECT username FROM users u WHERE u.userId = c.userId),
+		comment,
+		(SELECT COUNT(*) FROM comreact r WHERE r.commentId = c.commentId AND reaction = 'like'),
+		(SELECT COUNT(*) FROM comreact r WHERE r.commentId = c.commentId AND reaction = 'dislike'),
+		COALESCE((SELECT reaction FROM comreact r WHERE r.commentId = c.commentId AND r.userId = $1), "idle"),
+		c.postId
+	FROM comments c
+	WHERE c.postId = $2
 	`
-
-	sliceFromDB(&comments, query)
-
+	sliceFromDB(&comments, query, userID, r.FormValue("postID"))
+	returnJSON(comments, w)
 }

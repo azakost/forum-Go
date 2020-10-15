@@ -90,14 +90,6 @@ CREATE TABLE reactions (
 	userId INTEGER NOT NULL,
 	reaction TEXT DEFAULT 'idle');
 
-
-CREATE TABLE comreactions (
-	reactionId INTEGER PRIMARY KEY AUTOINCREMENT,
-	reacted DATETIME DEFAULT CURRENT_TIMESTAMP,
-	postId INTEGER NOT NULL,
-	userId INTEGER NOT NULL,
-	reaction TEXT DEFAULT 'idle');
-
 INSERT INTO reactions(postId, userId, reaction) 
 	values('1',	'1', 'like');
 
@@ -119,5 +111,28 @@ INSERT INTO comments(postId, userId, comment)
 
 INSERT INTO comments(postId, userId, comment) 
 	values('1',	'1', 'Best content!');
+
+
+INSERT INTO comments(postId, userId, comment) 
+	values('2',	'2', 'Hoooray!');
+
+
+CREATE TABLE comreact (
+	reactionId INTEGER PRIMARY KEY AUTOINCREMENT,
+	reacted DATETIME DEFAULT CURRENT_TIMESTAMP,
+	postId INTEGER NOT NULL,
+	commentId INTEGER NOT NULL,
+	userId INTEGER NOT NULL,
+	reaction TEXT DEFAULT 'idle');
+
+INSERT INTO comreact(commentId, userId, reaction, postId) 
+	values('1',	'1', 'like', '1');
+
+INSERT INTO comreact(commentId, userId, reaction, postId) 
+	values('1',	'2', 'dislike', '2');
+
+INSERT INTO comreact(commentId, userId, reaction, postId) 
+	values('2',	'2', 'dislike', '1');
+
 
 `
