@@ -171,6 +171,7 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	var postDB []struct {
 		PostID     int64
 		Posted     int64
+		AuthorID   int64
 		Username   string
 		Title      string
 		Text       string
@@ -183,6 +184,7 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	SELECT 
 		p.postId,
 		CAST(strftime('%s', p.posted) AS INT),
+		p.userId,
 		(SELECT username FROM users u WHERE u.userId = p.userId),
 		p.title, 
 		p.text,
@@ -200,6 +202,7 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	sliceFromDB(&postDB, query, logged, cat, userID, search, status, pageSize, offset)
 
 	if len(postDB) == 0 {
+		fmt.Println("empty")
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
@@ -208,6 +211,7 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	postView := make([]struct {
 		PostID     int64
 		Posted     int64
+		AuthorID   int64
 		Username   string
 		Title      string
 		Text       string
@@ -220,6 +224,7 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	for i, x := range postDB {
 		postView[i].PostID = x.PostID
 		postView[i].Posted = x.Posted
+		postView[i].AuthorID = x.AuthorID
 		postView[i].Username = x.Username
 		postView[i].Title = x.Title
 		postView[i].Likes = x.Likes
@@ -234,8 +239,6 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 func readpost(w http.ResponseWriter, r *http.Request) {
 
 	userID := fromCtx("userID", r)
-	fmt.Println(userID)
-
 	var postDB struct {
 		PostID     int64
 		Posted     int64
@@ -299,5 +302,26 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 }
 
 func readcomments(w http.ResponseWriter, r *http.Request) {
+
+	var comments []struct {
+		CommentID int64
+		Commented int64
+		AuthorID  int64
+		Username  string
+		Comment   string
+		Like      int64
+		Dislike   int64
+		Reaction  string
+	}
+
+	query := `
+	SELECT 
+
+
+	FROM 
+	
+	`
+
+	sliceFromDB(&comments, query)
 
 }

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"reflect"
 )
 
 func main() {
@@ -77,8 +76,8 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 			if err := recover(); err != nil {
 				switch err.(type) {
 
-				case *reflect.ValueError:
-					http.Error(w, http.StatusText(404), 404)
+				// case *reflect.ValueError:
+				// 	http.Error(w, http.StatusText(404), 404)
 				case *json.SyntaxError:
 					http.Error(w, http.StatusText(400), 400)
 				default:

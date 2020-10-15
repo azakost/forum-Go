@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"os"
 	"reflect"
@@ -77,8 +76,8 @@ func sliceFromDB(model interface{}, query string, args ...interface{}) {
 	err(rowsError)
 	defer rows.Close()
 
-	// get fields lenght
-	v := reflect.Indirect(reflect.ValueOf(model)).Type().Elem()
+	container := reflect.Indirect(reflect.ValueOf(model))
+	v := container.Type().Elem()
 	len := v.NumField()
 
 	// Make range variables with pointer for rows.Scan function
@@ -88,25 +87,18 @@ func sliceFromDB(model interface{}, query string, args ...interface{}) {
 		dest[i] = &tmp[i]
 	}
 
-	var data []interface{}
 	for rows.Next() {
 		// Get values from row
 		scanError := rows.Scan(dest...)
 		err(scanError)
 
 		// Put values to struct
-		row := reflect.New(v)
+		row := reflect.Indirect(reflect.New(v))
 		for i, t := range tmp {
-			row.Elem().Field(i).Set(reflect.ValueOf(t))
+			row.Field(i).Set(reflect.ValueOf(t))
 		}
-
-		data = append(data, row.Interface())
+		container.Set(reflect.Append(container, row))
 	}
-
-	// Need to find a better solution for this "Mashal-Unmarshal shit"
-	mar, _ := json.Marshal(data)
-	unmarshalError := json.Unmarshal(mar, &model)
-	err(unmarshalError)
 }
 
 func structFromDB(model interface{}, query string, args ...interface{}) error {
@@ -114,7 +106,8 @@ func structFromDB(model interface{}, query string, args ...interface{}) error {
 	err(databaseError)
 	defer db.Close()
 	row := db.QueryRow(query, args...)
-	v := reflect.Indirect(reflect.ValueOf(model)).Type()
+	container := reflect.Indirect(reflect.ValueOf(model))
+	v := container.Type()
 	len := v.NumField()
 	tmp := make([]interface{}, len)
 	dest := make([]interface{}, len)
@@ -128,15 +121,9 @@ func structFromDB(model interface{}, query string, args ...interface{}) error {
 		}
 		panic(scanError)
 	}
-	col := reflect.Indirect(reflect.New(v))
 	for i, t := range tmp {
-		col.Field(i).Set(reflect.ValueOf(t))
+		container.Field(i).Set(reflect.ValueOf(t))
 	}
-
-	// Need to find a better solution for this "Mashal-Unmarshal shit"
-	mar, _ := json.Marshal(col.Interface())
-	unmarshalError := json.Unmarshal(mar, &model)
-	err(unmarshalError)
 	return nil
 }
 
