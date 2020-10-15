@@ -188,7 +188,7 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	AND p.userId LIKE $3 
 	AND p.title LIKE $4 
 	AND p.status LIKE $5
-	`
+	LIMIT 10 OFFSET 10`
 	sliceFromDB(&postDB, query, logged, cat, userID, search, status)
 
 	if len(postDB) == 0 {
