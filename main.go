@@ -31,9 +31,9 @@ func main() {
 	endpoint("/api/updpost", updpost, "check JWT")
 	endpoint("/api/viewposts", viewposts)
 	endpoint("/api/readpost", readpost)
+	endpoint("/api/readcomments", readcomments)
 
 	//TODO
-	// Pagination for viewposts
 	// Show comments by postID
 	// Write comment (secure)
 	// Post reaction (secure)

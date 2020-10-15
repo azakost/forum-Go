@@ -297,3 +297,7 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 	postView.Categories = getCatNames(postDB.Categories)
 	returnJSON(postView, w)
 }
+
+func readcomments(w http.ResponseWriter, r *http.Request) {
+
+}
