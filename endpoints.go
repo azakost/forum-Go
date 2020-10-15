@@ -153,9 +153,9 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 
 	// TODO - PAGINATION!!!!!!!!!!!!!!!
 
-	var postsDB []struct {
+	var postDB []struct {
 		PostID     int64
-		Posted     time.Time
+		Posted     int64
 		Username   string
 		Title      string
 		Text       string
@@ -169,28 +169,34 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	search := "%" + reqQuery("search", r) + "%"
 	status := reqQuery("status", r)
 
-	query := `SELECT 
+	logged := fromCtx("userID", r)
+
+	query := `
+	SELECT 
 		p.postId,
-		p.posted,
-		u.username, 
+		CAST(strftime('%s', p.posted) AS INT),
+		(SELECT username FROM users u WHERE u.userId = p.userId),
 		p.title, 
 		p.text,
-		COUNT(CASE WHEN r.reaction = 1 THEN 1 END),
-		COUNT(CASE WHEN r.reaction = 0 THEN 1 END),
-		(CASE WHEN p.userID = $1 THEN (CASE WHEN r.reaction = 1 THEN 'like' ELSE 'dislike' END) ELSE (CASE WHEN $1 = 0 THEN 'forbidden' ELSE 'idle' END) END),
-		categories
-	FROM posts AS p 
-	LEFT JOIN reactions r ON r.postId = p.postId
-	INNER JOIN users u ON u.userId = p.userId
-	WHERE p.status > '0' 
+		(SELECT COUNT(*) FROM reactions r WHERE r.postId = p.postId AND reaction = 'like'),
+		(SELECT COUNT(*) FROM reactions r WHERE r.postId = p.postId AND reaction = 'dislike'),
+		COALESCE((SELECT reaction FROM reactions r WHERE r.postId = p.postId AND r.userId = $1), "idle"),
+		p.categories
+	FROM posts p WHERE 
+	p.status > '0' 
 	AND p.categories LIKE $2 
 	AND p.userId LIKE $3 
 	AND p.title LIKE $4 
-	AND p.status LIKE $5 `
+	AND p.status LIKE $5
+	`
+	sliceFromDB(&postDB, query, logged, cat, userID, search, status)
 
-	sliceFromDB(&postsDB, query, fromCtx("userID", r), cat, userID, search, status)
+	if len(postDB) == 0 {
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
 
-	postsView := make([]struct {
+	postView := make([]struct {
 		PostID     int64
 		Posted     int64
 		Username   string
@@ -200,20 +206,20 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 		Dislikes   int64
 		Reaction   string
 		Categories interface{}
-	}, len(postsDB))
+	}, len(postDB))
 
-	for i, p := range postsDB {
-		postsView[i].PostID = p.PostID
-		postsView[i].Posted = p.Posted.Unix()
-		postsView[i].Username = p.Username
-		postsView[i].Title = p.Title
-		postsView[i].Text = p.Text
-		postsView[i].Likes = p.Likes
-		postsView[i].Dislikes = p.Dislikes
-		postsView[i].Reaction = p.Reaction
-		postsView[i].Categories = getCatNames(p.Categories)
+	for i, x := range postDB {
+		postView[i].PostID = x.PostID
+		postView[i].Posted = x.Posted
+		postView[i].Username = x.Username
+		postView[i].Title = x.Title
+		postView[i].Likes = x.Likes
+		postView[i].Dislikes = x.Dislikes
+		postView[i].Reaction = x.Reaction
+		postView[i].Categories = getCatNames(x.Categories)
 	}
-	returnJSON(postsView, w)
+
+	returnJSON(postView, w)
 }
 
 func readpost(w http.ResponseWriter, r *http.Request) {
@@ -223,7 +229,7 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 
 	var postDB struct {
 		PostID     int64
-		Posted     time.Time
+		Posted     int64
 		Username   string
 		Title      string
 		Text       string
@@ -233,20 +239,20 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 		Categories string
 	}
 
-	query := `SELECT 
+	query := `
+	SELECT 
 		p.postId,
-		p.posted,
-		u.username, 
+		CAST(strftime('%s', p.posted) AS INT),
+		(SELECT username FROM users u WHERE u.userId = p.userId),
 		p.title, 
 		p.text,
-		COUNT(CASE WHEN r.reaction = 1 THEN 1 END),
-		COUNT(CASE WHEN r.reaction = 0 THEN 1 END),
-		(CASE WHEN p.userID = $1 THEN (CASE WHEN r.reaction = 1 THEN 'like' ELSE 'dislike' END) ELSE (CASE WHEN $1 = 0 THEN 'forbidden' ELSE 'idle' END) END),
-		categories
-	FROM posts AS p
-	LEFT JOIN reactions r ON r.postId = p.postId
-	INNER JOIN users u ON u.userId = p.userId
-	WHERE p.postId = $2`
+		(SELECT COUNT(*) FROM reactions r WHERE r.postId = p.postId AND reaction = 'like'),
+		(SELECT COUNT(*) FROM reactions r WHERE r.postId = p.postId AND reaction = 'dislike'),
+		COALESCE((SELECT reaction FROM reactions r WHERE r.postId = p.postId AND r.userId = $1), "idle"),
+		p.categories
+	FROM posts p WHERE 
+	p.postId = $2
+	`
 
 	post := r.FormValue("postID")
 	if post == "" {
@@ -273,7 +279,7 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	postView.PostID = postDB.PostID
-	postView.Posted = postDB.Posted.Unix()
+	postView.Posted = postDB.Posted
 	postView.Username = postDB.Username
 	postView.Title = postDB.Title
 	postView.Likes = postDB.Likes

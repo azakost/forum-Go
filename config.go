@@ -76,7 +76,7 @@ INSERT INTO posts(userId, title, text, categories)
 
 INSERT INTO posts(userId, title, text, categories) 
 	values(
-		'1',
+		'2',
 		'Hello!',
 		'sddsd',
 		'"2"'
@@ -88,17 +88,17 @@ CREATE TABLE reactions (
 	reacted DATETIME DEFAULT CURRENT_TIMESTAMP,
 	postId INTEGER NOT NULL,
 	userId INTEGER NOT NULL,
-	reaction INTEGER );
+	reaction TEXT DEFAULT 'idle');
 
 
 INSERT INTO reactions(postId, userId, reaction) 
-	values('1',	'1', '1');
+	values('1',	'1', 'like');
 
 INSERT INTO reactions(postId, userId, reaction) 
-	values('1',	'2', '0');
+	values('1',	'2', 'dislike');
 
 INSERT INTO reactions(postId, userId, reaction) 
-	values('2',	'2', '0');
+	values('2',	'2', 'dislike');
 
 CREATE TABLE comments (
 	replyId INTEGER PRIMARY KEY AUTOINCREMENT,
