@@ -62,7 +62,7 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func sliceFromDB(model interface{}, query string, args ...interface{}) {
+func sliceFromDB(model interface{}, query string, fn func(s string) []interface{}, args ...interface{}) {
 	db, databaseError := sql.Open("sqlite3", dbname)
 	err(databaseError)
 	defer db.Close()
@@ -77,6 +77,7 @@ func sliceFromDB(model interface{}, query string, args ...interface{}) {
 	defer rows.Close()
 
 	container := reflect.Indirect(reflect.ValueOf(model))
+
 	v := container.Type().Elem()
 	len := v.NumField()
 
@@ -95,13 +96,19 @@ func sliceFromDB(model interface{}, query string, args ...interface{}) {
 		// Put values to struct
 		row := reflect.Indirect(reflect.New(v))
 		for i, t := range tmp {
-			row.Field(i).Set(reflect.ValueOf(t))
+			if v.Field(i).Type.Kind() == reflect.Slice {
+				for _, x := range fn(t.(string)) {
+					row.Field(i).Set(reflect.Append(row.Field(i), reflect.ValueOf(x)))
+				}
+			} else {
+				row.Field(i).Set(reflect.ValueOf(t))
+			}
 		}
 		container.Set(reflect.Append(container, row))
 	}
 }
 
-func structFromDB(model interface{}, query string, args ...interface{}) error {
+func structFromDB(model interface{}, query string, fn func(s string) []interface{}, args ...interface{}) error {
 	db, databaseError := sql.Open("sqlite3", dbname)
 	err(databaseError)
 	defer db.Close()
@@ -122,7 +129,13 @@ func structFromDB(model interface{}, query string, args ...interface{}) error {
 		panic(scanError)
 	}
 	for i, t := range tmp {
-		container.Field(i).Set(reflect.ValueOf(t))
+		if container.Field(i).Kind() == reflect.Slice {
+			for _, x := range fn(t.(string)) {
+				container.Field(i).Set(reflect.Append(container.Field(i), reflect.ValueOf(x)))
+			}
+		} else {
+			container.Field(i).Set(reflect.ValueOf(t))
+		}
 	}
 	return nil
 }

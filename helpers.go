@@ -97,7 +97,7 @@ func reqQuery(name string, r *http.Request) string {
 	}
 }
 
-func getCatNames(c string) interface{} {
+func getCats(c string) []interface{} {
 
 	// Divide string to []string
 	cats := strings.FieldsFunc(c, func(c rune) bool {
@@ -110,7 +110,7 @@ func getCatNames(c string) interface{} {
 		Name string
 	}
 	catQuery := `SELECT categoryId, name FROM categories`
-	sliceFromDB(&categ, catQuery)
+	sliceFromDB(&categ, catQuery, nil)
 
 	var res []interface{}
 	for _, c := range cats {

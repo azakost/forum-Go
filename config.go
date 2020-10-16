@@ -57,6 +57,9 @@ INSERT INTO categories(name, description)
 		'JavaScript is a mother of all web devs!'
 	);
 
+
+
+	
 CREATE TABLE posts (
 	postId INTEGER PRIMARY KEY AUTOINCREMENT,
 	posted DATETIME DEFAULT CURRENT_TIMESTAMP,

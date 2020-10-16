@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -65,7 +64,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := `SELECT password, userId FROM users WHERE username = $1`
-	structError := structFromDB(&creds, query, login.Username)
+	structError := structFromDB(&creds, query, nil, login.Username)
 
 	// If no such user in DB
 	if structError != nil {
@@ -178,7 +177,7 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 		Likes      int64
 		Dislikes   int64
 		Reaction   string
-		Categories string
+		Categories []interface{}
 	}
 	query := `
 	SELECT 
@@ -199,41 +198,14 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	AND p.title LIKE $4 
 	AND p.status LIKE $5 LIMIT $6 OFFSET $7`
 
-	sliceFromDB(&postDB, query, logged, cat, userID, search, status, pageSize, offset)
+	sliceFromDB(&postDB, query, getCats, logged, cat, userID, search, status, pageSize, offset)
 
 	if len(postDB) == 0 {
-		fmt.Println("empty")
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
+	returnJSON(postDB, w)
 
-	// Copy slice from DB to new slice exept modified categories field
-	postView := make([]struct {
-		PostID     int64
-		Posted     int64
-		AuthorID   int64
-		Username   string
-		Title      string
-		Text       string
-		Likes      int64
-		Dislikes   int64
-		Reaction   string
-		Categories interface{}
-	}, len(postDB))
-
-	for i, x := range postDB {
-		postView[i].PostID = x.PostID
-		postView[i].Posted = x.Posted
-		postView[i].AuthorID = x.AuthorID
-		postView[i].Username = x.Username
-		postView[i].Title = x.Title
-		postView[i].Likes = x.Likes
-		postView[i].Dislikes = x.Dislikes
-		postView[i].Reaction = x.Reaction
-		postView[i].Categories = getCatNames(x.Categories)
-	}
-
-	returnJSON(postView, w)
 }
 
 func readpost(w http.ResponseWriter, r *http.Request) {
@@ -248,7 +220,7 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 		Likes      int64
 		Dislikes   int64
 		Reaction   string
-		Categories string
+		Categories []interface{}
 	}
 
 	query := `
@@ -272,33 +244,14 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	structError := structFromDB(&postDB, query, userID, post)
+	structError := structFromDB(&postDB, query, getCats, userID, post)
 	if structError != nil {
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
 
-	var postView struct {
-		PostID     int64
-		Posted     int64
-		Username   string
-		Title      string
-		Text       string
-		Likes      int64
-		Dislikes   int64
-		Reaction   string
-		Categories interface{}
-	}
+	returnJSON(postDB, w)
 
-	postView.PostID = postDB.PostID
-	postView.Posted = postDB.Posted
-	postView.Username = postDB.Username
-	postView.Title = postDB.Title
-	postView.Likes = postDB.Likes
-	postView.Dislikes = postDB.Dislikes
-	postView.Reaction = postDB.Reaction
-	postView.Categories = getCatNames(postDB.Categories)
-	returnJSON(postView, w)
 }
 
 func readcomments(w http.ResponseWriter, r *http.Request) {
@@ -328,6 +281,17 @@ func readcomments(w http.ResponseWriter, r *http.Request) {
 	FROM comments c
 	WHERE c.postId = $2
 	`
-	sliceFromDB(&comments, query, userID, r.FormValue("postID"))
+
+	sliceFromDB(&comments, query, nil, userID, r.FormValue("postID"))
 	returnJSON(comments, w)
+}
+
+func writecomment(w http.ResponseWriter, r *http.Request) {
+	// Struct request body
+	var comment struct {
+		PostID  int64  `json:"postID"`
+		Comment string `json:"comment"`
+	}
+	structBody(r, &comment)
+
 }

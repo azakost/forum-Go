@@ -32,10 +32,12 @@ func main() {
 	endpoint("/api/readpost", readpost)
 	endpoint("/api/readcomments", readcomments)
 
+	endpoint("/api/writecomment", writecomment)
+
 	//TODO
-	// Show comments by postID
 	// Write comment (secure)
 	// Post reaction (secure)
+	// Comment reaction (secure)
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)
