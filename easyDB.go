@@ -96,12 +96,13 @@ func sliceFromDB(model interface{}, query string, fn func(s string) []interface{
 		// Put values to struct
 		row := reflect.Indirect(reflect.New(v))
 		for i, t := range tmp {
+			f := row.Field(i)
 			if v.Field(i).Type.Kind() == reflect.Slice {
 				for _, x := range fn(t.(string)) {
-					row.Field(i).Set(reflect.Append(row.Field(i), reflect.ValueOf(x)))
+					f.Set(reflect.Append(f, reflect.ValueOf(x)))
 				}
 			} else {
-				row.Field(i).Set(reflect.ValueOf(t))
+				f.Set(reflect.ValueOf(t))
 			}
 		}
 		container.Set(reflect.Append(container, row))
