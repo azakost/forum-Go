@@ -66,22 +66,16 @@ func sliceFromDB(model interface{}, query string, fn func(s string) []interface{
 	db, databaseError := sql.Open("sqlite3", dbname)
 	err(databaseError)
 	defer db.Close()
-
-	// Prepare statement
 	statement, stmError := db.Prepare(query)
 	err(stmError)
-
-	// Get relevant rows by making query
 	rows, rowsError := statement.Query(args...)
 	err(rowsError)
 	defer rows.Close()
 
 	container := reflect.Indirect(reflect.ValueOf(model))
-
 	v := container.Type().Elem()
 	len := v.NumField()
 
-	// Make range variables with pointer for rows.Scan function
 	tmp := make([]interface{}, len)
 	dest := make([]interface{}, len)
 	for i := range tmp {
@@ -89,11 +83,8 @@ func sliceFromDB(model interface{}, query string, fn func(s string) []interface{
 	}
 
 	for rows.Next() {
-		// Get values from row
 		scanError := rows.Scan(dest...)
 		err(scanError)
-
-		// Put values to struct
 		row := reflect.Indirect(reflect.New(v))
 		for i, t := range tmp {
 			f := row.Field(i)
@@ -115,8 +106,7 @@ func structFromDB(model interface{}, query string, fn func(s string) []interface
 	defer db.Close()
 	row := db.QueryRow(query, args...)
 	container := reflect.Indirect(reflect.ValueOf(model))
-	v := container.Type()
-	len := v.NumField()
+	len := container.Type().NumField()
 	tmp := make([]interface{}, len)
 	dest := make([]interface{}, len)
 	for i := range tmp {
@@ -130,12 +120,13 @@ func structFromDB(model interface{}, query string, fn func(s string) []interface
 		panic(scanError)
 	}
 	for i, t := range tmp {
-		if container.Field(i).Kind() == reflect.Slice {
+		f := container.Field(i)
+		if f.Kind() == reflect.Slice {
 			for _, x := range fn(t.(string)) {
-				container.Field(i).Set(reflect.Append(container.Field(i), reflect.ValueOf(x)))
+				f.Set(reflect.Append(f, reflect.ValueOf(x)))
 			}
 		} else {
-			container.Field(i).Set(reflect.ValueOf(t))
+			f.Set(reflect.ValueOf(t))
 		}
 	}
 	return nil
