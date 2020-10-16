@@ -115,10 +115,8 @@ INSERT INTO comments(postId, userId, comment)
 INSERT INTO comments(postId, userId, comment) 
 	values('1',	'1', 'Best content!');
 
-
 INSERT INTO comments(postId, userId, comment) 
-	values('2',	'2', 'Hoooray!');
-
+	values('2',	'1', 'Bester content!');
 
 CREATE TABLE comreact (
 	reactionId INTEGER PRIMARY KEY AUTOINCREMENT,

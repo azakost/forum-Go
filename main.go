@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/mattn/go-sqlite3"
 )
 
 func main() {
@@ -32,7 +34,7 @@ func main() {
 	endpoint("/api/readpost", readpost)
 	endpoint("/api/readcomments", readcomments)
 
-	endpoint("/api/writecomment", writecomment)
+	endpoint("/api/writecomment", writecomment, "check JWT")
 
 	//TODO
 	// Write comment (secure)
@@ -76,15 +78,17 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 		// Error handler
 		defer func() {
 			if err := recover(); err != nil {
+
 				switch err.(type) {
 
-				// case *reflect.ValueError:
-				// 	http.Error(w, http.StatusText(404), 404)
-				case *json.SyntaxError:
+				case *json.SyntaxError, *json.UnmarshalTypeError, sqlite3.Error:
+					log.Printf("%+v", err)
 					http.Error(w, http.StatusText(400), 400)
 				default:
+
 					log.Printf("Server Error: %+v", err)
 					http.Error(w, http.StatusText(500), 500)
+
 				}
 			}
 		}()

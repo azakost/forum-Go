@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -265,7 +266,6 @@ func readcomments(w http.ResponseWriter, r *http.Request) {
 		Like      int64
 		Dislike   int64
 		Reaction  string
-		PostID    int64
 	}
 	query := `
 	SELECT 
@@ -276,8 +276,7 @@ func readcomments(w http.ResponseWriter, r *http.Request) {
 		comment,
 		(SELECT COUNT(*) FROM comreact r WHERE r.commentId = c.commentId AND reaction = 'like'),
 		(SELECT COUNT(*) FROM comreact r WHERE r.commentId = c.commentId AND reaction = 'dislike'),
-		COALESCE((SELECT reaction FROM comreact r WHERE r.commentId = c.commentId AND r.userId = $1), "idle"),
-		c.postId
+		COALESCE((SELECT reaction FROM comreact r WHERE r.commentId = c.commentId AND r.userId = $1), "idle")
 	FROM comments c
 	WHERE c.postId = $2
 	`
@@ -293,5 +292,19 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 		Comment string `json:"comment"`
 	}
 	structBody(r, &comment)
+
+	var validity report
+
+	validity.regcheck("too short comment", strings.TrimSpace(comment.Comment), `^.{2,}$`)
+
+	query := `INSERT INTO comments(postId, userId, comment) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
+
+	if len(validity) == 0 {
+		execQuery(query, comment.PostID, fromCtx("userID", r), comment.Comment)
+	} else {
+		log.Println("User Error: Post content is not valid!")
+		w.WriteHeader(400)
+		returnJSON(validity, w)
+	}
 
 }
