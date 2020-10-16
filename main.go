@@ -35,9 +35,9 @@ func main() {
 	endpoint("/api/readcomments", readcomments)
 
 	endpoint("/api/writecomment", writecomment, "check JWT")
+	endpoint("/api/postreact", postreact, "check JWT")
 
 	//TODO
-	// Write comment (secure)
 	// Post reaction (secure)
 	// Comment reaction (secure)
 
