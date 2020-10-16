@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -110,7 +109,6 @@ func addpost(w http.ResponseWriter, r *http.Request) {
 		query := `INSERT INTO posts(userId, title, text, categories) values($1, $2, $3, $4)`
 		execQuery(query, userID, post.Title, post.Text, cats)
 	} else {
-		log.Println("User Error: Post content is not valid!")
 		w.WriteHeader(400)
 		returnJSON(validity, w)
 	}
@@ -144,7 +142,6 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 		WHERE postId = $5 AND userId = $6`
 		execQuery(query, post.Title, post.Text, cats, post.Status, post.PostID, userID)
 	} else {
-		log.Println("User Error: Post content is not valid!")
 		w.WriteHeader(400)
 		returnJSON(validity, w)
 	}
@@ -311,6 +308,22 @@ func postreact(w http.ResponseWriter, r *http.Request) {
 	if reaction.Reaction == "like" || reaction.Reaction == "dislike" {
 		query := `INSERT INTO reactions(postId, userId, reaction) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
 		execQuery(query, reaction.PostID, fromCtx("userID", r), reaction.Reaction)
+	} else {
+		w.WriteHeader(400)
+		return
+	}
+}
+
+func commentreact(w http.ResponseWriter, r *http.Request) {
+	var reaction struct {
+		CommentID int64  `json:"commentID"`
+		Reaction  string `json:"reaction"`
+	}
+	structBody(r, &reaction)
+
+	if reaction.Reaction == "like" || reaction.Reaction == "dislike" {
+		query := `INSERT INTO comreact(commentId, userId, reaction) VALUES ((SELECT commentId FROM comments WHERE commentId = $1), $2, $3)`
+		execQuery(query, reaction.CommentID, fromCtx("userID", r), reaction.Reaction)
 	} else {
 		w.WriteHeader(400)
 		return

@@ -28,18 +28,16 @@ func main() {
 	endpoint("/api/register", register)
 	endpoint("/api/login", login)
 	endpoint("/api/logout", logout, "check JWT")
-	endpoint("/api/addpost", addpost, "check JWT")
-	endpoint("/api/updpost", updpost, "check JWT")
+
 	endpoint("/api/viewposts", viewposts)
 	endpoint("/api/readpost", readpost)
-	endpoint("/api/readcomments", readcomments)
+	endpoint("/api/addpost", addpost, "check JWT")
+	endpoint("/api/updpost", updpost, "check JWT")
 
+	endpoint("/api/readcomments", readcomments)
 	endpoint("/api/writecomment", writecomment, "check JWT")
 	endpoint("/api/postreact", postreact, "check JWT")
-
-	//TODO
-	// Post reaction (secure)
-	// Comment reaction (secure)
+	endpoint("/api/commentreact", commentreact, "check JWT")
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)
@@ -82,10 +80,8 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 				switch err.(type) {
 
 				case *json.SyntaxError, *json.UnmarshalTypeError, sqlite3.Error:
-					log.Printf("%+v", err)
 					http.Error(w, http.StatusText(400), 400)
 				default:
-
 					log.Printf("Server Error: %+v", err)
 					http.Error(w, http.StatusText(500), 500)
 
