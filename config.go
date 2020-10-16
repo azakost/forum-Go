@@ -85,22 +85,16 @@ INSERT INTO posts(userId, title, text, categories)
 		'"2"'
 	);
 		
-
 CREATE TABLE reactions (
 	reactionId INTEGER PRIMARY KEY AUTOINCREMENT,
 	reacted DATETIME DEFAULT CURRENT_TIMESTAMP,
 	postId INTEGER NOT NULL,
 	userId INTEGER NOT NULL,
-	reaction TEXT DEFAULT 'idle');
+	reaction TEXT DEFAULT 'idle',
+	UNIQUE (userId, postId, reaction));
 
 INSERT INTO reactions(postId, userId, reaction) 
 	values('1',	'1', 'like');
-
-INSERT INTO reactions(postId, userId, reaction) 
-	values('1',	'2', 'dislike');
-
-INSERT INTO reactions(postId, userId, reaction) 
-	values('2',	'2', 'dislike');
 
 CREATE TABLE comments (
 	commentId INTEGER PRIMARY KEY AUTOINCREMENT,

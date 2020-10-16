@@ -298,34 +298,25 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postreact(w http.ResponseWriter, r *http.Request) {
+func reaction(w http.ResponseWriter, r *http.Request) {
 	var reaction struct {
-		PostID   int64  `json:"postID"`
-		Reaction string `json:"reaction"`
-	}
-	structBody(r, &reaction)
-
-	if reaction.Reaction == "like" || reaction.Reaction == "dislike" {
-		query := `INSERT INTO reactions(postId, userId, reaction) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
-		execQuery(query, reaction.PostID, fromCtx("userID", r), reaction.Reaction)
-	} else {
-		w.WriteHeader(400)
-		return
-	}
-}
-
-func commentreact(w http.ResponseWriter, r *http.Request) {
-	var reaction struct {
+		PostID    int64  `json:"postID"`
 		CommentID int64  `json:"commentID"`
 		Reaction  string `json:"reaction"`
 	}
 	structBody(r, &reaction)
 
-	if reaction.Reaction == "like" || reaction.Reaction == "dislike" {
-		query := `INSERT INTO comreact(commentId, userId, reaction) VALUES ((SELECT commentId FROM comments WHERE commentId = $1), $2, $3)`
-		execQuery(query, reaction.CommentID, fromCtx("userID", r), reaction.Reaction)
+	var query string
+	var id int64
+	if reaction.PostID > 0 && reaction.CommentID == 0 && (reaction.Reaction == "like" || reaction.Reaction == "dislike") {
+		query = `INSERT INTO reactions(postId, userId, reaction) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
+		id = reaction.PostID
+	} else if reaction.PostID == 0 && reaction.CommentID > 0 && (reaction.Reaction == "like" || reaction.Reaction == "dislike") {
+		query = `INSERT INTO comreact(commentId, userId, reaction) VALUES ((SELECT commentId FROM comments WHERE commentId = $1), $2, $3)`
+		id = reaction.CommentID
 	} else {
 		w.WriteHeader(400)
 		return
 	}
+	execQuery(query, id, fromCtx("userID", r), reaction.Reaction)
 }

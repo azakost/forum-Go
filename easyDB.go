@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 
@@ -29,6 +30,7 @@ func execQuery(query string, args ...interface{}) {
 	err(databaseError)
 	defer db.Close()
 	_, execError := db.Exec(query, args...)
+	fmt.Print(execError)
 	err(execError)
 }
 
