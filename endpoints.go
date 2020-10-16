@@ -309,14 +309,15 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 	var query string
 	var id int64
 	if reaction.PostID > 0 && reaction.CommentID == 0 && (reaction.Reaction == "like" || reaction.Reaction == "dislike") {
-		query = `INSERT INTO reactions(postId, userId, reaction) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
 		id = reaction.PostID
+		query = `INSERT INTO reactions(postId, userId, reaction) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
 	} else if reaction.PostID == 0 && reaction.CommentID > 0 && (reaction.Reaction == "like" || reaction.Reaction == "dislike") {
-		query = `INSERT INTO comreact(commentId, userId, reaction) VALUES ((SELECT commentId FROM comments WHERE commentId = $1), $2, $3)`
 		id = reaction.CommentID
+		query = `INSERT INTO comreact(commentId, userId, reaction) VALUES ((SELECT commentId FROM comments WHERE commentId = $1), $2, $3)`
 	} else {
 		w.WriteHeader(400)
 		return
 	}
+
 	execQuery(query, id, fromCtx("userID", r), reaction.Reaction)
 }

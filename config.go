@@ -57,9 +57,6 @@ INSERT INTO categories(name, description)
 		'JavaScript is a mother of all web devs!'
 	);
 
-
-
-	
 CREATE TABLE posts (
 	postId INTEGER PRIMARY KEY AUTOINCREMENT,
 	posted DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -115,19 +112,9 @@ INSERT INTO comments(postId, userId, comment)
 CREATE TABLE comreact (
 	reactionId INTEGER PRIMARY KEY AUTOINCREMENT,
 	reacted DATETIME DEFAULT CURRENT_TIMESTAMP,
-	postId INTEGER NOT NULL,
 	commentId INTEGER NOT NULL,
 	userId INTEGER NOT NULL,
-	reaction TEXT DEFAULT 'idle');
-
-INSERT INTO comreact(commentId, userId, reaction, postId) 
-	values('1',	'1', 'like', '1');
-
-INSERT INTO comreact(commentId, userId, reaction, postId) 
-	values('1',	'2', 'dislike', '2');
-
-INSERT INTO comreact(commentId, userId, reaction, postId) 
-	values('2',	'2', 'dislike', '1');
-
+	reaction TEXT DEFAULT 'idle',
+	UNIQUE (userId, commentId, reaction));
 
 `
