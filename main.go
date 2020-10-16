@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -37,6 +36,7 @@ func main() {
 
 	endpoint("/api/readcomments", readcomments)
 	endpoint("/api/writecomment", writecomment, "check JWT")
+
 	endpoint("/api/reaction", reaction, "check JWT")
 
 	// Listen server
@@ -80,7 +80,6 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 				switch err.(type) {
 
 				case *json.SyntaxError, *json.UnmarshalTypeError, sqlite3.Error:
-					fmt.Println("Dsd")
 					http.Error(w, http.StatusText(400), 400)
 				default:
 					log.Printf("Server Error: %+v", err)

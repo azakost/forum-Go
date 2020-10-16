@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -107,7 +108,8 @@ func addpost(w http.ResponseWriter, r *http.Request) {
 	if len(validity) == 0 {
 		userID := fromCtx("userID", r)
 		query := `INSERT INTO posts(userId, title, text, categories) values($1, $2, $3, $4)`
-		execQuery(query, userID, post.Title, post.Text, cats)
+		execError := execQuery(query, userID, post.Title, post.Text, cats)
+		err(execError)
 	} else {
 		w.WriteHeader(400)
 		returnJSON(validity, w)
@@ -140,7 +142,8 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 			categories = $3,
 			status = $4 
 		WHERE postId = $5 AND userId = $6`
-		execQuery(query, post.Title, post.Text, cats, post.Status, post.PostID, userID)
+		execError := execQuery(query, post.Title, post.Text, cats, post.Status, post.PostID, userID)
+		err(execError)
 	} else {
 		w.WriteHeader(400)
 		returnJSON(validity, w)
@@ -291,7 +294,8 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 	validity.regcheck("too short comment", strings.TrimSpace(comment.Comment), `^.{2,}$`)
 	query := `INSERT INTO comments(postId, userId, comment) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
 	if len(validity) == 0 {
-		execQuery(query, comment.PostID, fromCtx("userID", r), comment.Comment)
+		execError := execQuery(query, comment.PostID, fromCtx("userID", r), comment.Comment)
+		err(execError)
 	} else {
 		w.WriteHeader(400)
 		returnJSON(validity, w)
@@ -307,17 +311,29 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 	structBody(r, &reaction)
 
 	var query string
+	var upd string
 	var id int64
-	if reaction.PostID > 0 && reaction.CommentID == 0 && (reaction.Reaction == "like" || reaction.Reaction == "dislike") {
+
+	reactionValid := reaction.Reaction == "like" || reaction.Reaction == "dislike" || reaction.Reaction == "idle"
+	if reaction.PostID > 0 && reaction.CommentID == 0 && reactionValid {
+		fmt.Print("Post")
 		id = reaction.PostID
 		query = `INSERT INTO reactions(postId, userId, reaction) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
-	} else if reaction.PostID == 0 && reaction.CommentID > 0 && (reaction.Reaction == "like" || reaction.Reaction == "dislike") {
+		upd = `UPDATE reactions SET reaction = $1 WHERE postId = $2 AND userId = $3`
+	} else if reaction.PostID == 0 && reaction.CommentID > 0 && reactionValid {
+		fmt.Print("Comment")
 		id = reaction.CommentID
 		query = `INSERT INTO comreact(commentId, userId, reaction) VALUES ((SELECT commentId FROM comments WHERE commentId = $1), $2, $3)`
+		upd = `UPDATE comreact SET reaction = $1 WHERE commentId = $2 AND userId = $3`
 	} else {
+		fmt.Print("Error")
 		w.WriteHeader(400)
 		return
 	}
 
-	execQuery(query, id, fromCtx("userID", r), reaction.Reaction)
+	execError := execQuery(query, id, fromCtx("userID", r), reaction.Reaction)
+	if strings.Contains(execError.Error(), "UNIQUE") {
+		fmt.Println("Uniq")
+		err(execQuery(upd, reaction.Reaction, id, fromCtx("userID", r)))
+	}
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"os"
 	"reflect"
 
@@ -20,18 +19,18 @@ func createDB(initialQuery string) {
 		file.Close()
 
 		// Execute initial query
-		execQuery(initialQuery)
+		execError := execQuery(initialQuery)
+		err(execError)
 	}
 }
 
 // Function for INSERT OR CREATE queries
-func execQuery(query string, args ...interface{}) {
+func execQuery(query string, args ...interface{}) error {
 	db, databaseError := sql.Open("sqlite3", dbname)
 	err(databaseError)
 	defer db.Close()
 	_, execError := db.Exec(query, args...)
-	fmt.Print(execError)
-	err(execError)
+	return execError
 }
 
 // Conditional Insert
