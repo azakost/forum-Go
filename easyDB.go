@@ -42,17 +42,26 @@ func conditionalInsert(condition bool, query string, args ...interface{}) error 
 	err(txError)
 	_, execError := tx.Exec(query, args...)
 	if execError != nil || condition {
-		rollbackError := tx.Rollback()
-		err(rollbackError)
+		err(tx.Rollback())
 		if execError != nil {
 			return execError
 		} else {
 			return errors.New("not nil")
 		}
 	}
-	commitError := tx.Commit()
-	err(commitError)
+	err(tx.Commit())
 	return nil
+}
+
+func rollInsert(query string, rollback func(e error, t *sql.Tx), args ...interface{}) {
+	db, databaseError := sql.Open("sqlite3", dbname)
+	err(databaseError)
+	defer db.Close()
+	tx, txError := db.Begin()
+	err(txError)
+	_, execError := tx.Exec(query, args...)
+	rollback(execError, tx)
+	err(tx.Commit())
 }
 
 func fileExists(filename string) bool {

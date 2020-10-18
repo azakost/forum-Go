@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,7 +17,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-	structBody(r, &reg)
+	readBody(r, &reg)
 
 	// Create validation report
 	var validity report
@@ -56,7 +56,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
-	structBody(r, &login)
+	readBody(r, &login)
 
 	// Get encrypted password from DB and user ID
 	var creds struct {
@@ -85,8 +85,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	userID := fromCtx("userID", r)
-	delete(sessions, userID)
+	delete(sessions, ctx("userID", r))
 	addCookie(w, "jwt", "", time.Unix(0, 0))
 }
 
@@ -98,7 +97,7 @@ func addpost(w http.ResponseWriter, r *http.Request) {
 		Text       string  `json:"text"`
 		Categories []int64 `json:"categories"`
 	}
-	structBody(r, &post)
+	readBody(r, &post)
 
 	// Create validation report
 	var validity report
@@ -106,9 +105,8 @@ func addpost(w http.ResponseWriter, r *http.Request) {
 	cats := processCategories(&validity, post.Categories)
 
 	if len(validity) == 0 {
-		userID := fromCtx("userID", r)
 		query := `INSERT INTO posts(userId, title, text, categories) values($1, $2, $3, $4)`
-		execError := execQuery(query, userID, post.Title, post.Text, cats)
+		execError := execQuery(query, ctx("userID", r), post.Title, post.Text, cats)
 		err(execError)
 	} else {
 		w.WriteHeader(400)
@@ -126,7 +124,7 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 		Status     int64   `json:"status"`
 		Categories []int64 `json:"categories"`
 	}
-	structBody(r, &post)
+	readBody(r, &post)
 
 	// Create validation report
 	var validity report
@@ -135,14 +133,13 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 	cats := processCategories(&validity, post.Categories)
 
 	if len(validity) == 0 {
-		userID := fromCtx("userID", r)
 		query := `UPDATE posts SET 
 			title = $1, 
 			text = $2, 
 			categories = $3,
 			status = $4 
 		WHERE postId = $5 AND userId = $6`
-		execError := execQuery(query, post.Title, post.Text, cats, post.Status, post.PostID, userID)
+		execError := execQuery(query, post.Title, post.Text, cats, post.Status, post.PostID, ctx("userID", r))
 		err(execError)
 	} else {
 		w.WriteHeader(400)
@@ -157,7 +154,6 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	userID := reqQuery("userID", r)
 	search := "%" + reqQuery("search", r) + "%"
 	status := reqQuery("status", r)
-	logged := fromCtx("userID", r)
 
 	// Pagination params
 	pageSize := 10
@@ -199,7 +195,7 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 	AND p.title LIKE $4 
 	AND p.status LIKE $5 LIMIT $6 OFFSET $7`
 
-	sliceFromDB(&postDB, query, getCats, logged, cat, userID, search, status, pageSize, offset)
+	sliceFromDB(&postDB, query, getCats, ctx("userID", r), cat, userID, search, status, pageSize, offset)
 
 	if len(postDB) == 0 {
 		http.Error(w, http.StatusText(400), 400)
@@ -211,7 +207,6 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 
 func readpost(w http.ResponseWriter, r *http.Request) {
 
-	userID := fromCtx("userID", r)
 	var postDB struct {
 		PostID     int64
 		Posted     int64
@@ -245,7 +240,7 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	structError := structFromDB(&postDB, query, getCats, userID, post)
+	structError := structFromDB(&postDB, query, getCats, ctx("userID", r), post)
 	if structError != nil {
 		http.Error(w, http.StatusText(400), 400)
 		return
@@ -256,7 +251,7 @@ func readpost(w http.ResponseWriter, r *http.Request) {
 }
 
 func readcomments(w http.ResponseWriter, r *http.Request) {
-	userID := fromCtx("userID", r)
+	userID := ctx("userID", r)
 	var comments []struct {
 		CommentID int64
 		Commented int64
@@ -289,12 +284,12 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 		PostID  int64  `json:"postID"`
 		Comment string `json:"comment"`
 	}
-	structBody(r, &comment)
+	readBody(r, &comment)
 	var validity report
 	validity.regcheck("too short comment", strings.TrimSpace(comment.Comment), `^.{2,}$`)
 	query := `INSERT INTO comments(postId, userId, comment) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
 	if len(validity) == 0 {
-		execError := execQuery(query, comment.PostID, fromCtx("userID", r), comment.Comment)
+		execError := execQuery(query, comment.PostID, ctx("userID", r), comment.Comment)
 		err(execError)
 	} else {
 		w.WriteHeader(400)
@@ -308,32 +303,32 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 		CommentID int64  `json:"commentID"`
 		Reaction  string `json:"reaction"`
 	}
-	structBody(r, &reaction)
+	readBody(r, &reaction)
 
+	var id int64
 	var query string
 	var upd string
-	var id int64
 
 	reactionValid := reaction.Reaction == "like" || reaction.Reaction == "dislike" || reaction.Reaction == "idle"
 	if reaction.PostID > 0 && reaction.CommentID == 0 && reactionValid {
-		fmt.Print("Post")
 		id = reaction.PostID
-		query = `INSERT INTO reactions(postId, userId, reaction) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
+		query = `INSERT INTO reactions(reaction, postId, userId) VALUES ($1, (SELECT postId FROM posts WHERE postId = $2), $3)`
 		upd = `UPDATE reactions SET reaction = $1 WHERE postId = $2 AND userId = $3`
 	} else if reaction.PostID == 0 && reaction.CommentID > 0 && reactionValid {
-		fmt.Print("Comment")
 		id = reaction.CommentID
-		query = `INSERT INTO comreact(commentId, userId, reaction) VALUES ((SELECT commentId FROM comments WHERE commentId = $1), $2, $3)`
+		query = `INSERT INTO comreact(reaction, commentId, userId) VALUES ($1, (SELECT commentId FROM comments WHERE commentId = $2), $3)`
 		upd = `UPDATE comreact SET reaction = $1 WHERE commentId = $2 AND userId = $3`
 	} else {
-		fmt.Print("Error")
 		w.WriteHeader(400)
 		return
 	}
-
-	execError := execQuery(query, id, fromCtx("userID", r), reaction.Reaction)
-	if strings.Contains(execError.Error(), "UNIQUE") {
-		fmt.Println("Uniq")
-		err(execQuery(upd, reaction.Reaction, id, fromCtx("userID", r)))
+	uid := ctx("userID", r)
+	roll := func(e error, tx *sql.Tx) {
+		if e != nil {
+			err(tx.Rollback())
+			_, execError := tx.Exec(upd, reaction.Reaction, id, uid)
+			err(execError)
+		}
 	}
+	rollInsert(query, roll, reaction.Reaction, id, uid)
 }

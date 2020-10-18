@@ -88,7 +88,7 @@ CREATE TABLE reactions (
 	postId INTEGER NOT NULL,
 	userId INTEGER NOT NULL,
 	reaction TEXT DEFAULT 'idle',
-	UNIQUE (userId, reaction, postId));
+	UNIQUE (userId, postId));
 
 INSERT INTO reactions(postId, userId, reaction) 
 	values('1',	'1', 'like');
@@ -115,6 +115,6 @@ CREATE TABLE comreact (
 	commentId INTEGER NOT NULL,
 	userId INTEGER NOT NULL,
 	reaction TEXT DEFAULT 'idle',
-	UNIQUE (userId, reaction, commentId));
+	UNIQUE (userId, commentId));
 
 `

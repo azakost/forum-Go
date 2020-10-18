@@ -18,7 +18,7 @@ func err(e error) {
 	}
 }
 
-func structBody(r *http.Request, data interface{}) {
+func readBody(r *http.Request, data interface{}) {
 	body, readError := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	err(readError)
@@ -54,7 +54,7 @@ func returnJSON(d interface{}, w http.ResponseWriter) {
 	err(writeError)
 }
 
-func fromCtx(key ctxKey, r *http.Request) int64 {
+func ctx(key ctxKey, r *http.Request) int64 {
 	if v := r.Context().Value(key); v != nil {
 		return v.(int64)
 	}
