@@ -69,7 +69,8 @@ CREATE TABLE claims (
 		type TEXT NOT NULL,
 		textId INTEGER NOT NULL,
 		userId INTEGER NOT NULL,
-		claim TEXT NOT NULL
+		claim TEXT NOT NULL,
+		status INTEGER DEFAULT 1
 	);
 
 INSERT INTO users(email, username, password, fullname, role) 
