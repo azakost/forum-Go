@@ -30,7 +30,7 @@ Websocket features:
 Admin features:
 - [x] - Category creation & edit
 - [x] - Category delete
-- [ ] - List all users
+- [x] - List all users
 - [ ] - Changing user's role
 
 Admin & Moderator features:
