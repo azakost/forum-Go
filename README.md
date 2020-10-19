@@ -1,6 +1,6 @@
 # Forum for Alem Community
 
-TO DO:
+User features:
 - [x] Registration with encrypted store of passwords in DB
 - [ ] Email Verification
 - [x] Login with JWT issue & logout with JWT removal
@@ -19,19 +19,22 @@ TO DO:
 - [ ] Post or comment report
 - [ ] Avatar upload (place to folder and name by user id)
 - [ ] Post image upload (return as new url)
-- [ ] Admin features:
+
+Websocket features:
+- [ ] - Posts live-apperance
+- [ ] - Comments live-apperance
+- [ ] - Likes/Dislikes count live-changing
+- [ ] - Who's online
+- [ ] - Notifications
+
+Admin features:
 - [x] - Category creation & edit
 - [x] - Category delete
 - [ ] - List all users
 - [ ] - Changing user's role
-- [ ] Admin & Moderator features:
+
+Admin & Moderator features:
 - [x] - User's post and comment edit
 - [ ] - Reports review
 - [ ] - Report change status
 - [ ] - User suspension with due time
-- [ ] Websocket features:
-- [ ] - Posts auto-apperance
-- [ ] - Comments auto-apperance
-- [ ] - Likes/Dislikes count changing
-- [ ] - Who's online
-- [ ] - Notifications
