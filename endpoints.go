@@ -157,6 +157,12 @@ func posts(w http.ResponseWriter, r *http.Request) {
 	search := "%" + reqQuery("search", r) + "%"
 	status := reqQuery("status", r)
 	postID := reqQuery("postID", r)
+	byreact := r.FormValue("byreact")
+
+	order := "ORDER BY p.posted DESC"
+	if byreact == "likes" || byreact == "dislikes" {
+		order = "ORDER BY " + byreact + " DESC"
+	}
 
 	// Pagination params
 	pageSize := 10
@@ -187,8 +193,8 @@ func posts(w http.ResponseWriter, r *http.Request) {
 		(SELECT username FROM users u WHERE u.userId = p.userId),
 		p.title, 
 		p.text,
-		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'like'),
-		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'dislike'),
+		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'like') AS likes,
+		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'dislike') AS dislikes,
 		COALESCE((SELECT reaction FROM postReactions r WHERE r.postId = p.postId AND r.userId = $1), "idle"),
 		p.categories
 	FROM posts p WHERE 
@@ -197,9 +203,7 @@ func posts(w http.ResponseWriter, r *http.Request) {
 	AND p.userId LIKE $3 
 	AND p.title LIKE $4 
 	AND p.postId LIKE $5
-	AND p.status LIKE $6 
-	ORDER BY p.posted DESC 
-	LIMIT $7 OFFSET $8`
+	AND p.status LIKE $6` + order + `LIMIT $7 OFFSET $8`
 
 	uid := ctx("user", r).(ctxData).ID
 	sliceFromDB(&postDB, query, getCats, uid, cat, userID, search, postID, status, pageSize, offset)
