@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -41,6 +42,9 @@ func main() {
 
 	// Like-Dislike on post or comment
 	endpoint("/api/reaction", reaction, "check JWT")
+
+	endpoint("/api/claim", claim, "check JWT")
+	endpoint("/api/viewclaims", viewclaims, "check JWT")
 
 	// ADMIN FEATURES
 	endpoint("/api/categories", categories)
@@ -95,6 +99,7 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 			if err := recover(); err != nil {
 				switch err.(type) {
 				case *json.SyntaxError, *json.UnmarshalTypeError:
+					fmt.Println(err)
 					http.Error(w, http.StatusText(400), 400)
 				default:
 					log.Printf("Server Error: %+v", err)

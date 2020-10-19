@@ -386,3 +386,52 @@ func changerole(w http.ResponseWriter, r *http.Request) {
 	query := `UPDATE users SET role = $1 WHERE userId = $2`
 	err(insert(query, false, user.Role, user.UserID))
 }
+
+func claim(w http.ResponseWriter, r *http.Request) {
+	var claim struct {
+		PostID    int64  `json:"postID"`
+		CommentID int64  `json:"commentID"`
+		Text      string `json:"text"`
+	}
+	readBody(r, &claim)
+
+	var validity report
+	validity.regcheck("no claim text", strings.TrimSpace(claim.Text), `^.{2,}$`)
+
+	if len(validity) > 0 {
+		w.WriteHeader(400)
+		returnJSON(validity, w)
+		return
+	}
+
+	var query string
+	var id int64
+	if claim.PostID > 0 && claim.CommentID == 0 {
+		id = claim.PostID
+		query = `INSERT INTO claims(type, textId, claim, userId) VALUES('post', $1, $2, $3)`
+	} else if claim.PostID == 0 && claim.CommentID > 0 {
+		id = claim.CommentID
+		query = `INSERT INTO claims(type, textId, claim, userId) VALUES('comment', $1, $2, $3)`
+	} else {
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+	uid := ctx("user", r).(ctxData).ID
+	err(insert(query, false, id, claim.Text, uid))
+}
+
+func viewclaims(w http.ResponseWriter, r *http.Request) {
+	var claims []struct {
+		ClaimID int64
+		Claimed int64
+		Type    string
+		TextID  int64
+		UserID  int64
+		Claim   string
+	}
+
+	query := `SELECT claimId, CAST(strftime('%s', claimed) AS INT), type, textId, userId, claim FROM claims`
+	sliceFromDB(&claims, query, nil)
+
+	returnJSON(claims, w)
+}

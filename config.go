@@ -63,6 +63,15 @@ CREATE TABLE commentReactions (
 	reaction TEXT DEFAULT 'idle',
 	UNIQUE (userId, commentId));
 
+CREATE TABLE claims (
+		claimId INTEGER PRIMARY KEY AUTOINCREMENT,
+		claimed DATETIME DEFAULT CURRENT_TIMESTAMP,
+		type TEXT NOT NULL,
+		textId INTEGER NOT NULL,
+		userId INTEGER NOT NULL,
+		claim TEXT NOT NULL
+	);
+
 INSERT INTO users(email, username, password, fullname, role) 
 	values(
 		'azakost@gmail.com',
