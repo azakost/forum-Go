@@ -31,7 +31,7 @@ Admin features:
 - [x] Category creation & edit
 - [x] Category delete
 - [x] List all users
-- [ ] Changing user's role
+- [x] Changing user's role
 
 Admin & Moderator features:
 - [x] User's post and comment edit
