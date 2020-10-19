@@ -93,37 +93,37 @@ func sliceFromDB(model interface{}, query string, fn func(s string) []interface{
 	}
 }
 
-func structFromDB(model interface{}, query string, fn func(s string) []interface{}, args ...interface{}) error {
-	db, databaseError := sql.Open("sqlite3", dbname)
-	err(databaseError)
-	defer db.Close()
-	row := db.QueryRow(query, args...)
-	container := reflect.Indirect(reflect.ValueOf(model))
-	len := container.Type().NumField()
-	tmp := make([]interface{}, len)
-	dest := make([]interface{}, len)
-	for i := range tmp {
-		dest[i] = &tmp[i]
-	}
-	scanError := row.Scan(dest...)
-	if scanError != nil {
-		if scanError == sql.ErrNoRows {
-			return scanError
-		}
-		panic(scanError)
-	}
-	for i, t := range tmp {
-		f := container.Field(i)
-		if f.Kind() == reflect.Slice {
-			for _, x := range fn(t.(string)) {
-				f.Set(reflect.Append(f, reflect.ValueOf(x)))
-			}
-		} else {
-			f.Set(reflect.ValueOf(t))
-		}
-	}
-	return nil
-}
+// func structFromDB(model interface{}, query string, fn func(s string) []interface{}, args ...interface{}) error {
+// 	db, databaseError := sql.Open("sqlite3", dbname)
+// 	err(databaseError)
+// 	defer db.Close()
+// 	row := db.QueryRow(query, args...)
+// 	container := reflect.Indirect(reflect.ValueOf(model))
+// 	len := container.Type().NumField()
+// 	tmp := make([]interface{}, len)
+// 	dest := make([]interface{}, len)
+// 	for i := range tmp {
+// 		dest[i] = &tmp[i]
+// 	}
+// 	scanError := row.Scan(dest...)
+// 	if scanError != nil {
+// 		if scanError == sql.ErrNoRows {
+// 			return scanError
+// 		}
+// 		panic(scanError)
+// 	}
+// 	for i, t := range tmp {
+// 		f := container.Field(i)
+// 		if f.Kind() == reflect.Slice {
+// 			for _, x := range fn(t.(string)) {
+// 				f.Set(reflect.Append(f, reflect.ValueOf(x)))
+// 			}
+// 		} else {
+// 			f.Set(reflect.ValueOf(t))
+// 		}
+// 	}
+// 	return nil
+// }
 
 func isInDB(query string, data interface{}) bool {
 	db, databaseError := sql.Open("sqlite3", dbname)

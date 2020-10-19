@@ -58,28 +58,33 @@ func login(w http.ResponseWriter, r *http.Request) {
 	readBody(r, &login)
 
 	// Get encrypted password from DB and user ID
-	var creds struct {
+	var creds []struct {
 		Password string
 		UserID   int64
 	}
 
 	query := `SELECT password, userId FROM users WHERE username = $1`
-	structError := structFromDB(&creds, query, nil, login.Username)
+	sliceFromDB(&creds, query, nil, login.Username)
 
 	// If no such user in DB
-	if structError != nil {
+	if len(creds) == 0 {
 		http.Error(w, http.StatusText(404), 404)
 		return
 	}
 
+	if len(creds) > 1 {
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+
 	// Check passwors
-	if !cryptIsValid(creds.Password, login.Password) {
+	if !cryptIsValid(creds[0].Password, login.Password) {
 		http.Error(w, http.StatusText(403), 403)
 		return
 	}
 
 	// Set new JWT if password correct
-	setJWT(creds.UserID, w)
+	setJWT(creds[0].UserID, w)
 
 }
 
@@ -88,71 +93,56 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	addCookie(w, "jwt", "", time.Unix(0, 0))
 }
 
-func addpost(w http.ResponseWriter, r *http.Request) {
+func writepost(w http.ResponseWriter, r *http.Request) {
 
 	// Struct request body
 	var post struct {
 		Title      string  `json:"title"`
 		Text       string  `json:"text"`
 		Categories []int64 `json:"categories"`
-	}
-	readBody(r, &post)
-
-	// Create validation report
-	var validity report
-	validity.regcheck("wrong title", post.Title, `^.{3,140}$`)
-	cats := processCategories(&validity, post.Categories)
-
-	if len(validity) == 0 {
-		query := `INSERT INTO posts(userId, title, text, categories) values($1, $2, $3, $4)`
-		execError := execQuery(query, ctx("userID", r), post.Title, post.Text, cats)
-		err(execError)
-	} else {
-		w.WriteHeader(400)
-		returnJSON(validity, w)
-	}
-}
-
-func updpost(w http.ResponseWriter, r *http.Request) {
-
-	// Struct request body
-	var post struct {
 		PostID     int64   `json:"postID"`
 		Status     int64   `json:"status"`
-		Title      string  `json:"title"`
-		Text       string  `json:"text"`
-		Categories []int64 `json:"categories"`
 	}
 	readBody(r, &post)
 
 	// Create validation report
 	var validity report
-	validity.regcheck("wrong title", post.Title, `^.{3,140}$`)
-	validity.logcheck("wrong status", post.Status > 2 || post.Status < 0)
+	validity.regcheck("wrong title", strings.TrimSpace(post.Title), `^.{3,140}$`)
+	validity.logcheck("wrong status", (post.Status > 2 || post.Status < 0) && post.PostID != 0)
 	cats := processCategories(&validity, post.Categories)
 
-	if len(validity) == 0 {
-		query := `UPDATE posts SET 
+	if len(validity) > 0 {
+		w.WriteHeader(400)
+		returnJSON(validity, w)
+		return
+	}
+
+	uid := ctx("userID", r)
+	if post.PostID == 0 {
+		ins := `INSERT INTO posts(title, text, categories, userId) values($1, $2, $3, $4)`
+		insert(ins, false, post.Title, post.Text, cats, uid)
+	} else {
+		upd := `UPDATE posts SET 
 			title = $1, 
 			text = $2, 
 			categories = $3,
 			status = $4 
 		WHERE postId = $5 AND userId = $6`
-		execError := execQuery(query, post.Title, post.Text, cats, post.Status, post.PostID, ctx("userID", r))
-		err(execError)
-	} else {
-		w.WriteHeader(400)
-		returnJSON(validity, w)
+		insert(upd, false, post.Title, post.Text, cats, post.Status, post.PostID, uid)
 	}
 }
 
-func viewposts(w http.ResponseWriter, r *http.Request) {
+func posts(w http.ResponseWriter, r *http.Request) {
 
 	// Get request query params
 	cat := "%\"" + reqQuery("cat", r) + "\"%"
 	userID := reqQuery("userID", r)
 	search := "%" + reqQuery("search", r) + "%"
 	status := reqQuery("status", r)
+	postID := r.FormValue("postID")
+	if postID == "" {
+		postID = "%"
+	}
 
 	// Pagination params
 	pageSize := 10
@@ -188,68 +178,20 @@ func viewposts(w http.ResponseWriter, r *http.Request) {
 		COALESCE((SELECT reaction FROM reactions r WHERE r.postId = p.postId AND r.userId = $1), "idle"),
 		p.categories
 	FROM posts p WHERE 
-	p.status > '0' 
+	p.status > '0'
 	AND p.categories LIKE $2 
 	AND p.userId LIKE $3 
 	AND p.title LIKE $4 
-	AND p.status LIKE $5 LIMIT $6 OFFSET $7`
+	AND p.postId LIKE $5
+	AND p.status LIKE $6 
+	ORDER BY p.posted DESC 
+	LIMIT $7 OFFSET $8`
 
-	sliceFromDB(&postDB, query, getCats, ctx("userID", r), cat, userID, search, status, pageSize, offset)
-
-	if len(postDB) == 0 {
-		http.Error(w, http.StatusText(400), 400)
-		return
-	}
+	sliceFromDB(&postDB, query, getCats, ctx("userID", r), cat, userID, search, postID, status, pageSize, offset)
 	returnJSON(postDB, w)
-
 }
 
-func readpost(w http.ResponseWriter, r *http.Request) {
-
-	var postDB struct {
-		PostID     int64
-		Posted     int64
-		Username   string
-		Title      string
-		Text       string
-		Likes      int64
-		Dislikes   int64
-		Reaction   string
-		Categories []interface{}
-	}
-
-	query := `
-	SELECT 
-		p.postId,
-		CAST(strftime('%s', p.posted) AS INT),
-		(SELECT username FROM users u WHERE u.userId = p.userId),
-		p.title, 
-		p.text,
-		(SELECT COUNT(*) FROM reactions r WHERE r.postId = p.postId AND reaction = 'like'),
-		(SELECT COUNT(*) FROM reactions r WHERE r.postId = p.postId AND reaction = 'dislike'),
-		COALESCE((SELECT reaction FROM reactions r WHERE r.postId = p.postId AND r.userId = $1), "idle"),
-		p.categories
-	FROM posts p WHERE 
-	p.postId = $2
-	`
-
-	post := r.FormValue("postID")
-	if post == "" {
-		http.Error(w, http.StatusText(400), 400)
-		return
-	}
-
-	structError := structFromDB(&postDB, query, getCats, ctx("userID", r), post)
-	if structError != nil {
-		http.Error(w, http.StatusText(400), 400)
-		return
-	}
-
-	returnJSON(postDB, w)
-
-}
-
-func readcomments(w http.ResponseWriter, r *http.Request) {
+func comments(w http.ResponseWriter, r *http.Request) {
 	userID := ctx("userID", r)
 	var comments []struct {
 		CommentID int64
@@ -272,8 +214,8 @@ func readcomments(w http.ResponseWriter, r *http.Request) {
 		(SELECT COUNT(*) FROM comreact r WHERE r.commentId = c.commentId AND reaction = 'dislike'),
 		COALESCE((SELECT reaction FROM comreact r WHERE r.commentId = c.commentId AND r.userId = $1), "idle")
 	FROM comments c
-	WHERE c.postId = $2
-	`
+	WHERE c.postId = $2`
+
 	sliceFromDB(&comments, query, nil, userID, r.FormValue("postID"))
 	returnJSON(comments, w)
 }

@@ -6,8 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/mattn/go-sqlite3"
 )
 
 func main() {
@@ -29,12 +27,13 @@ func main() {
 	endpoint("/api/login", login)
 	endpoint("/api/logout", logout, "check JWT")
 
-	endpoint("/api/viewposts", viewposts)
-	endpoint("/api/readpost", readpost)
-	endpoint("/api/addpost", addpost, "check JWT")
-	endpoint("/api/updpost", updpost, "check JWT")
+	// Get all posts or sertain post by ID (also include all post filtering)
+	endpoint("/api/posts", posts)
 
-	endpoint("/api/readcomments", readcomments)
+	
+	endpoint("/api/writepost", writepost, "check JWT")
+
+	endpoint("/api/comments", comments)
 	endpoint("/api/writecomment", writecomment, "check JWT")
 
 	// Like-Dislike on post or comment
@@ -64,7 +63,6 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 
 		// JWT validation handler
 		if len(secure) > 0 && !isValid {
-			log.Println("User Error: JWT is not valid")
 			http.Error(w, http.StatusText(403), 403)
 			return
 		}
@@ -77,15 +75,12 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 		// Error handler
 		defer func() {
 			if err := recover(); err != nil {
-
 				switch err.(type) {
-
-				case *json.SyntaxError, *json.UnmarshalTypeError, sqlite3.Error:
+				case *json.SyntaxError, *json.UnmarshalTypeError:
 					http.Error(w, http.StatusText(400), 400)
 				default:
 					log.Printf("Server Error: %+v", err)
 					http.Error(w, http.StatusText(500), 500)
-
 				}
 			}
 		}()
