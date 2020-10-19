@@ -118,9 +118,17 @@ func writepost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uid := ctx("userID", r)
+
+	text := ""
+	if strings.TrimSpace(post.Text) != "" {
+		text = post.Text
+	}
+
+	var e error
 	if post.PostID == 0 {
 		ins := `INSERT INTO posts(title, text, categories, userId) values($1, $2, $3, $4)`
-		insert(ins, false, post.Title, post.Text, cats, uid)
+		e = insert(ins, false, post.Title, text, cats, uid)
+
 	} else {
 		upd := `UPDATE posts SET 
 			title = $1, 
@@ -128,7 +136,18 @@ func writepost(w http.ResponseWriter, r *http.Request) {
 			categories = $3,
 			status = $4 
 		WHERE postId = $5 AND userId = $6`
-		insert(upd, false, post.Title, post.Text, cats, post.Status, post.PostID, uid)
+		e = insert(upd, false, post.Title, text, cats, post.Status, post.PostID, uid)
+
+	}
+	if e != nil {
+		validity.errcheck("not unique", e, "posts.title")
+		if len(validity) > 0 {
+			w.WriteHeader(400)
+			returnJSON(validity, w)
+			return
+		}
+		err(e)
+
 	}
 }
 
@@ -139,10 +158,7 @@ func posts(w http.ResponseWriter, r *http.Request) {
 	userID := reqQuery("userID", r)
 	search := "%" + reqQuery("search", r) + "%"
 	status := reqQuery("status", r)
-	postID := r.FormValue("postID")
-	if postID == "" {
-		postID = "%"
-	}
+	postID := reqQuery("postID", r)
 
 	// Pagination params
 	pageSize := 10
@@ -173,9 +189,9 @@ func posts(w http.ResponseWriter, r *http.Request) {
 		(SELECT username FROM users u WHERE u.userId = p.userId),
 		p.title, 
 		p.text,
-		(SELECT COUNT(*) FROM reactions r WHERE r.postId = p.postId AND reaction = 'like'),
-		(SELECT COUNT(*) FROM reactions r WHERE r.postId = p.postId AND reaction = 'dislike'),
-		COALESCE((SELECT reaction FROM reactions r WHERE r.postId = p.postId AND r.userId = $1), "idle"),
+		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'like'),
+		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'dislike'),
+		COALESCE((SELECT reaction FROM postReactions r WHERE r.postId = p.postId AND r.userId = $1), "idle"),
 		p.categories
 	FROM posts p WHERE 
 	p.status > '0'
@@ -192,7 +208,7 @@ func posts(w http.ResponseWriter, r *http.Request) {
 }
 
 func comments(w http.ResponseWriter, r *http.Request) {
-	userID := ctx("userID", r)
+	uid := ctx("userID", r)
 	var comments []struct {
 		CommentID int64
 		Commented int64
@@ -210,31 +226,39 @@ func comments(w http.ResponseWriter, r *http.Request) {
 		c.userId,
 		(SELECT username FROM users u WHERE u.userId = c.userId),
 		comment,
-		(SELECT COUNT(*) FROM comreact r WHERE r.commentId = c.commentId AND reaction = 'like'),
-		(SELECT COUNT(*) FROM comreact r WHERE r.commentId = c.commentId AND reaction = 'dislike'),
-		COALESCE((SELECT reaction FROM comreact r WHERE r.commentId = c.commentId AND r.userId = $1), "idle")
+		(SELECT COUNT(*) FROM commentReactions r WHERE r.commentId = c.commentId AND reaction = 'like'),
+		(SELECT COUNT(*) FROM commentReactions r WHERE r.commentId = c.commentId AND reaction = 'dislike'),
+		COALESCE((SELECT reaction FROM commentReactions r WHERE r.commentId = c.commentId AND r.userId = $1), "idle")
 	FROM comments c
 	WHERE c.postId = $2`
 
-	sliceFromDB(&comments, query, nil, userID, r.FormValue("postID"))
+	sliceFromDB(&comments, query, nil, uid, r.FormValue("postID"))
 	returnJSON(comments, w)
 }
 
 func writecomment(w http.ResponseWriter, r *http.Request) {
 	var comment struct {
-		PostID  int64  `json:"postID"`
-		Comment string `json:"comment"`
+		PostID    int64  `json:"postID"`
+		Comment   string `json:"comment"`
+		CommentID int64  `json:"commentID"`
 	}
 	readBody(r, &comment)
 	var validity report
 	validity.regcheck("too short comment", strings.TrimSpace(comment.Comment), `^.{2,}$`)
-	query := `INSERT INTO comments(postId, userId, comment) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
-	if len(validity) == 0 {
-		execError := execQuery(query, comment.PostID, ctx("userID", r), comment.Comment)
-		err(execError)
-	} else {
-		w.WriteHeader(400)
+
+	if len(validity) > 0 {
 		returnJSON(validity, w)
+		w.WriteHeader(400)
+		return
+	}
+
+	uid := ctx("userID", r)
+	if comment.CommentID == 0 {
+		ins := `INSERT INTO comments(postId, comment, userId) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
+		err(insert(ins, false, comment.PostID, comment.Comment, uid))
+	} else {
+		upd := `UPDATE comments SET comment = $1 WHERE commentId= $2 AND userId = $3`
+		err(insert(upd, false, comment.Comment, comment.CommentID, uid))
 	}
 }
 
@@ -253,12 +277,12 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 	reactionValid := react.Reaction == "like" || react.Reaction == "dislike" || react.Reaction == "idle"
 	if react.PostID > 0 && react.CommentID == 0 && reactionValid {
 		id = react.PostID
-		query = `INSERT INTO reactions(reaction, postId, userId) VALUES ($1, (SELECT postId FROM posts WHERE postId = $2), $3)`
-		upd = `UPDATE reactions SET reaction = $1 WHERE postId = $2 AND userId = $3`
+		query = `INSERT INTO postReactions(reaction, postId, userId) VALUES ($1, (SELECT postId FROM posts WHERE postId = $2), $3)`
+		upd = `UPDATE postReactions SET reaction = $1 WHERE postId = $2 AND userId = $3`
 	} else if react.PostID == 0 && react.CommentID > 0 && reactionValid {
 		id = react.CommentID
-		query = `INSERT INTO comreact(reaction, commentId, userId) VALUES ($1, (SELECT commentId FROM comments WHERE commentId = $2), $3)`
-		upd = `UPDATE comreact SET reaction = $1 WHERE commentId = $2 AND userId = $3`
+		query = `INSERT INTO commentReactions(reaction, commentId, userId) VALUES ($1, (SELECT commentId FROM comments WHERE commentId = $2), $3)`
+		upd = `UPDATE commentReactions SET reaction = $1 WHERE commentId = $2 AND userId = $3`
 	} else {
 		w.WriteHeader(400)
 		return

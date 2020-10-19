@@ -30,14 +30,25 @@ func main() {
 	// Get all posts or sertain post by ID (also include all post filtering)
 	endpoint("/api/posts", posts)
 
-	
+	// Write or update post
 	endpoint("/api/writepost", writepost, "check JWT")
 
+	// Get all comments by post ID
 	endpoint("/api/comments", comments)
+
+	// Wrie comment or update comment
 	endpoint("/api/writecomment", writecomment, "check JWT")
 
 	// Like-Dislike on post or comment
 	endpoint("/api/reaction", reaction, "check JWT")
+
+	// ADMIN FEATURES
+
+	// All-users table
+	// Change user role
+	// Change user status
+	// Add / Update / Delete categories
+
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)

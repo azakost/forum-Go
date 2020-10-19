@@ -8,10 +8,16 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const dbname = "database.db"
-
 // Create db if not exists
 func createDB(initialQuery string) {
+	fileExists := func(filename string) bool {
+		info, err := os.Stat(filename)
+		if os.IsNotExist(err) {
+			return false
+		}
+		return !info.IsDir()
+	}
+
 	if !fileExists(dbname) {
 		file, createError := os.Create(dbname)
 		err(createError)
@@ -45,14 +51,6 @@ func insert(query string, condition bool, args ...interface{}) error {
 	}
 	err(tx.Commit())
 	return nil
-}
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }
 
 func sliceFromDB(model interface{}, query string, fn func(s string) []interface{}, args ...interface{}) {
@@ -92,38 +90,6 @@ func sliceFromDB(model interface{}, query string, fn func(s string) []interface{
 		container.Set(reflect.Append(container, row))
 	}
 }
-
-// func structFromDB(model interface{}, query string, fn func(s string) []interface{}, args ...interface{}) error {
-// 	db, databaseError := sql.Open("sqlite3", dbname)
-// 	err(databaseError)
-// 	defer db.Close()
-// 	row := db.QueryRow(query, args...)
-// 	container := reflect.Indirect(reflect.ValueOf(model))
-// 	len := container.Type().NumField()
-// 	tmp := make([]interface{}, len)
-// 	dest := make([]interface{}, len)
-// 	for i := range tmp {
-// 		dest[i] = &tmp[i]
-// 	}
-// 	scanError := row.Scan(dest...)
-// 	if scanError != nil {
-// 		if scanError == sql.ErrNoRows {
-// 			return scanError
-// 		}
-// 		panic(scanError)
-// 	}
-// 	for i, t := range tmp {
-// 		f := container.Field(i)
-// 		if f.Kind() == reflect.Slice {
-// 			for _, x := range fn(t.(string)) {
-// 				f.Set(reflect.Append(f, reflect.ValueOf(x)))
-// 			}
-// 		} else {
-// 			f.Set(reflect.ValueOf(t))
-// 		}
-// 	}
-// 	return nil
-// }
 
 func isInDB(query string, data interface{}) bool {
 	db, databaseError := sql.Open("sqlite3", dbname)
