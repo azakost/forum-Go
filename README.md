@@ -10,6 +10,7 @@ TO DO:
 - [x] - by user id
 - [x] - by post id
 - [x] - by serach pattern
+- [ ] - by most liked/disliked numbers
 - [x] - with pagination
 - [x] Write/update post
 - [x] Write/update comment
@@ -17,4 +18,3 @@ TO DO:
 - [ ] Moderator features:
 - [x] - User's post and comment edit
 - [ ] - User time ban
-- [ ] - 
