@@ -9,7 +9,7 @@ TO DO:
 - [x] - by status
 - [x] - by user id
 - [x] - by post id
-- [x] - by serach pattern
+- [x] - by search pattern
 - [ ] - by most liked/disliked numbers
 - [x] - with pagination
 - [x] Write/update/delete post
@@ -18,9 +18,9 @@ TO DO:
 - [ ] Post or comment report
 - [ ] Moderator features:
 - [x] - User's post and comment edit
-- [ ] - Post or comments silent hide
 - [ ] - Reports review
 - [ ] - User time ban
 - [ ] Admin features:
-- [ ] - Category creation/edit/delete
-- [ ] - Chaning user's role
+- [x] - Category creation & edit
+- [x] - Category delete
+- [ ] - Changing user's role

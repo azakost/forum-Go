@@ -265,7 +265,6 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 		ins := `INSERT INTO comments(postId, comment, userId) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
 		err(insert(ins, false, comment.PostID, comment.Comment, uid))
 	} else {
-
 		upd := `UPDATE comments SET comment = $1 WHERE commentId= $2 AND (userId = $3 OR $4 = 'admin' OR $4 = 'moderator')`
 		err(insert(upd, false, comment.Comment, comment.CommentID, uid, role))
 	}
@@ -278,11 +277,9 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 		Reaction  string `json:"reaction"`
 	}
 	readBody(r, &react)
-
 	var id int64
 	var query string
 	var upd string
-
 	reactionValid := react.Reaction == "like" || react.Reaction == "dislike" || react.Reaction == "idle"
 	if react.PostID > 0 && react.CommentID == 0 && reactionValid {
 		id = react.PostID
@@ -296,10 +293,61 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(400), 400)
 		return
 	}
-
 	uid := ctx("user", r).(ctxData).ID
 	rollback := insert(query, false, react.Reaction, id, uid)
 	if rollback != nil {
 		err(insert(upd, false, react.Reaction, id, uid))
 	}
+}
+
+func updcategory(w http.ResponseWriter, r *http.Request) {
+	if ctx("user", r).(ctxData).Role != "admin" {
+		http.Error(w, http.StatusText(403), 403)
+		return
+	}
+	var cat struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		CategoryID  int64  `json:"categoryID"`
+	}
+	readBody(r, &cat)
+	var validity report
+	validity.regcheck("wrong category name", cat.Name, `^.{2,10}$`)
+	validity.regcheck("wrong description", cat.Description, `^.{2,}$`)
+	if ctx("user", r).(ctxData).Role == "admin" && len(validity) == 0 {
+		if cat.CategoryID == 0 {
+			query := "INSERT INTO categories(name, description) VALUES ($1, $2)"
+			err(insert(query, false, cat.Name, cat.Description))
+		} else {
+			query := "UPDATE categories SET name = $1, description = $2 WHERE categoryId = $3"
+			err(insert(query, false, cat.Name, cat.Description, cat.CategoryID))
+		}
+	}
+}
+
+func deletecategory(w http.ResponseWriter, r *http.Request) {
+	if ctx("user", r).(ctxData).Role != "admin" {
+		http.Error(w, http.StatusText(403), 403)
+		return
+	}
+	var cat struct {
+		CategoryID int64 `json:"categoryID"`
+	}
+	readBody(r, &cat)
+	category := "%\"" + strconv.FormatInt(cat.CategoryID, 10) + "\"%"
+	query := `
+		DELETE FROM categories WHERE categoryId = $1;
+		UPDATE posts SET categories = REPLACE(categories, $2, '') WHERE categories LIKE $2;`
+	err(insert(query, false, cat.CategoryID, category))
+}
+
+func categories(w http.ResponseWriter, r *http.Request) {
+	var cat []struct {
+		CategoryID  int64  `json:"categoryID"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	query := `SELECT categoryId, name, description FROM categories`
+	sliceFromDB(&cat, query, nil)
+	returnJSON(cat, w)
 }

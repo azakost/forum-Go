@@ -43,11 +43,9 @@ func main() {
 	endpoint("/api/reaction", reaction, "check JWT")
 
 	// ADMIN FEATURES
-
-	// All-users table
-	// Change user role
-	// Change user status
-	// Add / Update / Delete categories
+	endpoint("/api/categories", categories)
+	endpoint("/api/updcategory", updcategory, "check JWT")
+	endpoint("/api/deletecategory", deletecategory, "check JWT")
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)
