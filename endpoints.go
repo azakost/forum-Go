@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
@@ -33,14 +32,14 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	// Making conditional insert - if data is valid insert will be commited
 	query := `INSERT INTO users(email, username, fullname, password) values( $1, $2, $3, $4)`
-	insertError := conditionalInsert(len(validity) > 0, query, reg.Email, reg.Username, reg.Fullname, pass)
+	rollback := insert(query, len(validity) > 0, reg.Email, reg.Username, reg.Fullname, pass)
 
 	// If conditional insert returned error - insert will rollback
-	if insertError != nil {
+	if rollback != nil {
 
 		// Validate Email and Username for case of uniqness in DB
-		validity.errcheck("email already exist", insertError, "users.email")
-		validity.errcheck("user already exist", insertError, "users.user")
+		validity.errcheck("email already exist", rollback, "users.email")
+		validity.errcheck("user already exist", rollback, "users.user")
 
 		// Return Error with validation report
 		w.WriteHeader(400)
@@ -119,9 +118,9 @@ func updpost(w http.ResponseWriter, r *http.Request) {
 	// Struct request body
 	var post struct {
 		PostID     int64   `json:"postID"`
+		Status     int64   `json:"status"`
 		Title      string  `json:"title"`
 		Text       string  `json:"text"`
-		Status     int64   `json:"status"`
 		Categories []int64 `json:"categories"`
 	}
 	readBody(r, &post)
@@ -298,24 +297,24 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 }
 
 func reaction(w http.ResponseWriter, r *http.Request) {
-	var reaction struct {
+	var react struct {
 		PostID    int64  `json:"postID"`
 		CommentID int64  `json:"commentID"`
 		Reaction  string `json:"reaction"`
 	}
-	readBody(r, &reaction)
+	readBody(r, &react)
 
 	var id int64
 	var query string
 	var upd string
 
-	reactionValid := reaction.Reaction == "like" || reaction.Reaction == "dislike" || reaction.Reaction == "idle"
-	if reaction.PostID > 0 && reaction.CommentID == 0 && reactionValid {
-		id = reaction.PostID
+	reactionValid := react.Reaction == "like" || react.Reaction == "dislike" || react.Reaction == "idle"
+	if react.PostID > 0 && react.CommentID == 0 && reactionValid {
+		id = react.PostID
 		query = `INSERT INTO reactions(reaction, postId, userId) VALUES ($1, (SELECT postId FROM posts WHERE postId = $2), $3)`
 		upd = `UPDATE reactions SET reaction = $1 WHERE postId = $2 AND userId = $3`
-	} else if reaction.PostID == 0 && reaction.CommentID > 0 && reactionValid {
-		id = reaction.CommentID
+	} else if react.PostID == 0 && react.CommentID > 0 && reactionValid {
+		id = react.CommentID
 		query = `INSERT INTO comreact(reaction, commentId, userId) VALUES ($1, (SELECT commentId FROM comments WHERE commentId = $2), $3)`
 		upd = `UPDATE comreact SET reaction = $1 WHERE commentId = $2 AND userId = $3`
 	} else {
@@ -323,12 +322,9 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := ctx("userID", r)
-	roll := func(e error, tx *sql.Tx) {
-		if e != nil {
-			err(tx.Rollback())
-			_, execError := tx.Exec(upd, reaction.Reaction, id, uid)
-			err(execError)
-		}
+
+	rollback := insert(query, false, react.Reaction, id, uid)
+	if rollback != nil {
+		err(insert(upd, false, react.Reaction, id, uid))
 	}
-	rollInsert(query, roll, reaction.Reaction, id, uid)
 }

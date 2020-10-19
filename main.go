@@ -37,6 +37,7 @@ func main() {
 	endpoint("/api/readcomments", readcomments)
 	endpoint("/api/writecomment", writecomment, "check JWT")
 
+	// Like-Dislike on post or comment
 	endpoint("/api/reaction", reaction, "check JWT")
 
 	// Listen server
