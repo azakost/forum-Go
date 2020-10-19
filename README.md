@@ -21,20 +21,20 @@ User features:
 - [ ] Post image upload (return as new url)
 
 Websocket features:
-- [ ] - Posts live-apperance
-- [ ] - Comments live-apperance
-- [ ] - Likes/Dislikes count live-changing
-- [ ] - Who's online
-- [ ] - Notifications
+- [ ] Posts live-apperance
+- [ ] Comments live-apperance
+- [ ] Likes/Dislikes count live-changing
+- [ ] Who's online
+- [ ] Notifications
 
 Admin features:
-- [x] - Category creation & edit
-- [x] - Category delete
-- [x] - List all users
-- [ ] - Changing user's role
+- [x] Category creation & edit
+- [x] Category delete
+- [x] List all users
+- [ ] Changing user's role
 
 Admin & Moderator features:
-- [x] - User's post and comment edit
-- [ ] - Reports review
-- [ ] - Report change status
-- [ ] - User suspension with due time
+- [x] User's post and comment edit
+- [ ] Reports review
+- [ ] Report change status
+- [ ] User suspension with due time

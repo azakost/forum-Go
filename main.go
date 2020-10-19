@@ -47,6 +47,7 @@ func main() {
 	endpoint("/api/updcategory", updcategory, "check JWT")
 	endpoint("/api/deletecategory", deletecategory, "check JWT")
 	endpoint("/api/users", users, "check JWT")
+	endpoint("/api/changerole", changerole, "check JWT")
 
 	// Listen server
 	log.Println("Running http://localhost:" + port)

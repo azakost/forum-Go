@@ -372,3 +372,17 @@ func users(w http.ResponseWriter, r *http.Request) {
 	sliceFromDB(&users, query, nil)
 	returnJSON(users, w)
 }
+
+func changerole(w http.ResponseWriter, r *http.Request) {
+	if ctx("user", r).(ctxData).Role != "admin" {
+		http.Error(w, http.StatusText(403), 403)
+		return
+	}
+	var user struct {
+		UserID int64  `json:"userID"`
+		Role   string `json:"role"`
+	}
+	readBody(r, &user)
+	query := `UPDATE users SET role = $1 WHERE userId = $2`
+	err(insert(query, false, user.Role, user.UserID))
+}
