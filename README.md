@@ -12,9 +12,15 @@ TO DO:
 - [x] - by serach pattern
 - [ ] - by most liked/disliked numbers
 - [x] - with pagination
-- [x] Write/update post
-- [x] Write/update comment
+- [x] Write/update/delete post
+- [x] Write/update/delete comment
 - [x] Like/dislike post or comment
+- [ ] Post or comment report
 - [ ] Moderator features:
 - [x] - User's post and comment edit
+- [ ] - Post or comments silent hide
+- [ ] - Reports review
 - [ ] - User time ban
+- [ ] Admin features:
+- [ ] - Category creation/edit/delete
+- [ ] - Chaning user's role

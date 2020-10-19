@@ -106,6 +106,17 @@ func writepost(w http.ResponseWriter, r *http.Request) {
 	}
 	readBody(r, &post)
 
+	role := ctx("user", r).(ctxData).Role
+	uid := ctx("user", r).(ctxData).ID
+
+	var e error
+	if post.Status == 0 && post.Title == "" {
+		upd := `UPDATE posts SET status = $1 WHERE postId = $2 AND (userId = $3 OR $4 = 'admin' OR $4 = 'moderator')`
+		e = insert(upd, false, post.Status, post.PostID, uid, role)
+		err(e)
+		return
+	}
+
 	// Create validation report
 	var validity report
 	validity.regcheck("wrong title", strings.TrimSpace(post.Title), `^.{3,140}$`)
@@ -118,37 +129,24 @@ func writepost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uid := ctx("user", r).(ctxData).ID
 	text := ""
 	if strings.TrimSpace(post.Text) != "" {
 		text = post.Text
 	}
 
-	var e error
 	if post.PostID == 0 {
 		ins := `INSERT INTO posts(title, text, categories, userId) values($1, $2, $3, $4)`
 		e = insert(ins, false, post.Title, text, cats, uid)
-
 	} else {
 		upd := `UPDATE posts SET 
 			title = $1, 
 			text = $2, 
 			categories = $3,
 			status = $4 
-		WHERE postId = $5 AND (userId = $6 OR $7 = 'admin' OR $7 = 'moderator')`
-		role := ctx("user", r).(ctxData).Role
+			WHERE postId = $5 AND (userId = $6 OR $7 = 'admin' OR $7 = 'moderator')`
 		e = insert(upd, false, post.Title, text, cats, post.Status, post.PostID, uid, role)
-
 	}
-	if e != nil {
-		validity.errcheck("not unique", e, "posts.title")
-		if len(validity) > 0 {
-			w.WriteHeader(400)
-			returnJSON(validity, w)
-			return
-		}
-		err(e)
-	}
+	err(e)
 }
 
 func posts(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +229,7 @@ func comments(w http.ResponseWriter, r *http.Request) {
 		(SELECT COUNT(*) FROM commentReactions r WHERE r.commentId = c.commentId AND reaction = 'dislike'),
 		COALESCE((SELECT reaction FROM commentReactions r WHERE r.commentId = c.commentId AND r.userId = $1), "idle")
 	FROM comments c
-	WHERE c.postId = $2`
+	WHERE c.status > '0' AND c.postId = $2`
 
 	sliceFromDB(&comments, query, nil, uid, r.FormValue("postID"))
 	returnJSON(comments, w)
@@ -242,8 +240,18 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 		PostID    int64  `json:"postID"`
 		Comment   string `json:"comment"`
 		CommentID int64  `json:"commentID"`
+		Status    int64  `json:"status"`
 	}
 	readBody(r, &comment)
+
+	role := ctx("user", r).(ctxData).Role
+	uid := ctx("user", r).(ctxData).ID
+	if comment.Status == 0 && comment.Comment == "" {
+		upd := `UPDATE comments SET status = $1 WHERE commentId= $2 AND (userId = $3 OR $4 = 'admin' OR $4 = 'moderator')`
+		err(insert(upd, false, comment.Status, comment.CommentID, uid, role))
+		return
+	}
+
 	var validity report
 	validity.regcheck("too short comment", strings.TrimSpace(comment.Comment), `^.{2,}$`)
 
@@ -253,12 +261,11 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uid := ctx("user", r).(ctxData).ID
 	if comment.CommentID == 0 {
 		ins := `INSERT INTO comments(postId, comment, userId) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
 		err(insert(ins, false, comment.PostID, comment.Comment, uid))
 	} else {
-		role := ctx("user", r).(ctxData).Role
+
 		upd := `UPDATE comments SET comment = $1 WHERE commentId= $2 AND (userId = $3 OR $4 = 'admin' OR $4 = 'moderator')`
 		err(insert(upd, false, comment.Comment, comment.CommentID, uid, role))
 	}
