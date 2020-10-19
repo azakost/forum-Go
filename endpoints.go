@@ -203,7 +203,7 @@ func posts(w http.ResponseWriter, r *http.Request) {
 	AND p.userId LIKE $3 
 	AND p.title LIKE $4 
 	AND p.postId LIKE $5
-	AND p.status LIKE $6` + order + `LIMIT $7 OFFSET $8`
+	AND p.status LIKE $6 ` + order + ` LIMIT $7 OFFSET $8`
 
 	uid := ctx("user", r).(ctxData).ID
 	sliceFromDB(&postDB, query, getCats, uid, cat, userID, search, postID, status, pageSize, offset)

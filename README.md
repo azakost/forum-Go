@@ -10,7 +10,7 @@ TO DO:
 - [x] - by user id
 - [x] - by post id
 - [x] - by search pattern
-- [ ] - by most liked/disliked numbers
+- [x] - by most liked/disliked posts
 - [x] - with pagination
 - [x] Write/update/delete post
 - [x] Write/update/delete comment
