@@ -16,7 +16,7 @@ User features:
 - [x] Write/update/delete post
 - [x] Write/update/delete comment
 - [x] Like/dislike post or comment
-- [ ] Post or comment report
+- [x] Post or comment report
 - [ ] Avatar upload (place to folder and name by user id)
 - [ ] Post image upload (return as new url)
 
@@ -35,6 +35,6 @@ Admin features:
 
 Admin & Moderator features:
 - [x] User's post and comment edit
-- [ ] Reports review
+- [x] Reports review
 - [ ] Report change status
 - [ ] User suspension with due time
