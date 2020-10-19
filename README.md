@@ -2,6 +2,7 @@
 
 TO DO:
 - [x] Registration with encrypted store of passwords in DB
+- [ ] Email Verification
 - [x] Login with JWT issue & logout with JWT removal
 - [ ] Login/Registration using GitHub
 - [x] Get posts details [author, title, text, timestamp, categories, likes, dislikes]: 
@@ -16,11 +17,21 @@ TO DO:
 - [x] Write/update/delete comment
 - [x] Like/dislike post or comment
 - [ ] Post or comment report
-- [ ] Moderator features:
-- [x] - User's post and comment edit
-- [ ] - Reports review
-- [ ] - User time ban
+- [ ] Avatar upload (place to folder and name by user id)
+- [ ] Post image upload (return as new url)
 - [ ] Admin features:
 - [x] - Category creation & edit
 - [x] - Category delete
+- [ ] - List all users
 - [ ] - Changing user's role
+- [ ] Admin & Moderator features:
+- [x] - User's post and comment edit
+- [ ] - Reports review
+- [ ] - Report change status
+- [ ] - User suspension with due time
+- [ ] Websocket features:
+- [ ] - Posts auto-apperance
+- [ ] - Comments auto-apperance
+- [ ] - Likes/Dislikes count changing
+- [ ] - Who's online
+- [ ] - Notifications

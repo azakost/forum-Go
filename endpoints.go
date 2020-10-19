@@ -355,3 +355,20 @@ func categories(w http.ResponseWriter, r *http.Request) {
 	sliceFromDB(&cat, query, nil)
 	returnJSON(cat, w)
 }
+
+func users(w http.ResponseWriter, r *http.Request) {
+	if ctx("user", r).(ctxData).Role != "admin" {
+		http.Error(w, http.StatusText(403), 403)
+		return
+	}
+	var users []struct {
+		Fullname string
+		Username string
+		Email    string
+		Role     string
+		Status   int64
+	}
+	query := `SELECT fullname, username, email, role, status FROM users`
+	sliceFromDB(&users, query, nil)
+	returnJSON(users, w)
+}
