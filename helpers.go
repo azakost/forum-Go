@@ -54,11 +54,11 @@ func returnJSON(d interface{}, w http.ResponseWriter) {
 	err(writeError)
 }
 
-func ctx(key ctxKey, r *http.Request) int64 {
+func ctx(key ctxKey, r *http.Request) interface{} {
 	if v := r.Context().Value(key); v != nil {
-		return v.(int64)
+		return v
 	}
-	return 0
+	return nil
 }
 
 func addCookie(w http.ResponseWriter, name, value string, exp time.Time) {

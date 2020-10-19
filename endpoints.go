@@ -61,9 +61,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 	var creds []struct {
 		Password string
 		UserID   int64
+		Role     string
 	}
 
-	query := `SELECT password, userId FROM users WHERE username = $1`
+	query := `SELECT password, userId, role FROM users WHERE username = $1`
 	sliceFromDB(&creds, query, nil, login.Username)
 
 	// If no such user in DB
@@ -84,12 +85,12 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set new JWT if password correct
-	setJWT(creds[0].UserID, w)
+	setJWT(creds[0].UserID, creds[0].Role, w)
 
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	delete(sessions, ctx("userID", r))
+	delete(sessions, ctx("user", r).(ctxData).ID)
 	addCookie(w, "jwt", "", time.Unix(0, 0))
 }
 
@@ -117,8 +118,7 @@ func writepost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uid := ctx("userID", r)
-
+	uid := ctx("user", r).(ctxData).ID
 	text := ""
 	if strings.TrimSpace(post.Text) != "" {
 		text = post.Text
@@ -135,8 +135,9 @@ func writepost(w http.ResponseWriter, r *http.Request) {
 			text = $2, 
 			categories = $3,
 			status = $4 
-		WHERE postId = $5 AND userId = $6`
-		e = insert(upd, false, post.Title, text, cats, post.Status, post.PostID, uid)
+		WHERE postId = $5 AND (userId = $6 OR $7 = 'admin' OR $7 = 'moderator')`
+		role := ctx("user", r).(ctxData).Role
+		e = insert(upd, false, post.Title, text, cats, post.Status, post.PostID, uid, role)
 
 	}
 	if e != nil {
@@ -147,7 +148,6 @@ func writepost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		err(e)
-
 	}
 }
 
@@ -203,12 +203,13 @@ func posts(w http.ResponseWriter, r *http.Request) {
 	ORDER BY p.posted DESC 
 	LIMIT $7 OFFSET $8`
 
-	sliceFromDB(&postDB, query, getCats, ctx("userID", r), cat, userID, search, postID, status, pageSize, offset)
+	uid := ctx("user", r).(ctxData).ID
+	sliceFromDB(&postDB, query, getCats, uid, cat, userID, search, postID, status, pageSize, offset)
 	returnJSON(postDB, w)
 }
 
 func comments(w http.ResponseWriter, r *http.Request) {
-	uid := ctx("userID", r)
+	uid := ctx("user", r).(ctxData).ID
 	var comments []struct {
 		CommentID int64
 		Commented int64
@@ -247,18 +248,19 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 	validity.regcheck("too short comment", strings.TrimSpace(comment.Comment), `^.{2,}$`)
 
 	if len(validity) > 0 {
-		returnJSON(validity, w)
 		w.WriteHeader(400)
+		returnJSON(validity, w)
 		return
 	}
 
-	uid := ctx("userID", r)
+	uid := ctx("user", r).(ctxData).ID
 	if comment.CommentID == 0 {
 		ins := `INSERT INTO comments(postId, comment, userId) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
 		err(insert(ins, false, comment.PostID, comment.Comment, uid))
 	} else {
-		upd := `UPDATE comments SET comment = $1 WHERE commentId= $2 AND userId = $3`
-		err(insert(upd, false, comment.Comment, comment.CommentID, uid))
+		role := ctx("user", r).(ctxData).Role
+		upd := `UPDATE comments SET comment = $1 WHERE commentId= $2 AND (userId = $3 OR $4 = 'admin' OR $4 = 'moderator')`
+		err(insert(upd, false, comment.Comment, comment.CommentID, uid, role))
 	}
 }
 
@@ -284,11 +286,11 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 		query = `INSERT INTO commentReactions(reaction, commentId, userId) VALUES ($1, (SELECT commentId FROM comments WHERE commentId = $2), $3)`
 		upd = `UPDATE commentReactions SET reaction = $1 WHERE commentId = $2 AND userId = $3`
 	} else {
-		w.WriteHeader(400)
+		http.Error(w, http.StatusText(400), 400)
 		return
 	}
-	uid := ctx("userID", r)
 
+	uid := ctx("user", r).(ctxData).ID
 	rollback := insert(query, false, react.Reaction, id, uid)
 	if rollback != nil {
 		err(insert(upd, false, react.Reaction, id, uid))

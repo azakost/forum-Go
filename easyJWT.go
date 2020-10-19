@@ -29,11 +29,12 @@ var sessions = make(map[int64]string)
 
 type jwt struct {
 	UserID int64     `json:"userID"`
+	Role   string    `json:"role"`
 	Expire time.Time `json:"expire"`
 	Token  string    `json:"token"`
 }
 
-func setJWT(userID int64, w http.ResponseWriter) {
+func setJWT(userID int64, role string, w http.ResponseWriter) {
 	exp := time.Now().Add(tokenLife)
 	token := encrypt(strconv.FormatInt(userID, 10) + exp.String())
 
@@ -42,6 +43,7 @@ func setJWT(userID int64, w http.ResponseWriter) {
 	jTok.UserID = userID
 	jTok.Expire = exp
 	jTok.Token = token
+	jTok.Role = role
 
 	data, marshalError := json.Marshal(jTok)
 	err(marshalError)
@@ -64,14 +66,14 @@ func setJWT(userID int64, w http.ResponseWriter) {
 	addCookie(w, "jwt", val, exp)
 }
 
-func validateJWT(w http.ResponseWriter, r *http.Request) (bool, int64) {
+func validateJWT(w http.ResponseWriter, r *http.Request) (bool, int64, string) {
 
 	// Read Cookie
 	var jTok jwt
 	credsError := getCreds(&jTok, r)
 	if credsError != nil {
 		addCookie(w, "jwt", "", time.Unix(0, 0))
-		return false, 0
+		return false, 0, ""
 	}
 
 	// Check if email exists in sessions map
@@ -79,7 +81,7 @@ func validateJWT(w http.ResponseWriter, r *http.Request) (bool, int64) {
 
 	if !ok {
 		addCookie(w, "jwt", "", time.Unix(0, 0))
-		return false, 0
+		return false, 0, ""
 	}
 
 	// Filter 1 - Stright token compare and fail if not equal
@@ -87,21 +89,21 @@ func validateJWT(w http.ResponseWriter, r *http.Request) (bool, int64) {
 	if val != jTok.Token {
 		delete(sessions, jTok.UserID)
 		addCookie(w, "jwt", "", time.Unix(0, 0))
-		return false, 0
+		return false, 0, ""
 	}
 
 	// Filter 2 - If token is expired
 	if time.Now().After(jTok.Expire) {
 		delete(sessions, jTok.UserID)
 		addCookie(w, "jwt", "", time.Unix(0, 0))
-		return false, 0
+		return false, 0, ""
 	}
 
 	// Filter 3 - if token is more than 1 hour old - refresh it
 	if jTok.Expire.Before(time.Now().Add(tokenRefresh)) {
-		setJWT(jTok.UserID, w)
+		setJWT(jTok.UserID, jTok.Role, w)
 	}
-	return true, jTok.UserID
+	return true, jTok.UserID, jTok.Role
 }
 
 func getCreds(model *jwt, r *http.Request) error {

@@ -49,7 +49,6 @@ func main() {
 	// Change user status
 	// Add / Update / Delete categories
 
-
 	// Listen server
 	log.Println("Running http://localhost:" + port)
 	e := http.ListenAndServe(":"+port, nil)
@@ -58,6 +57,10 @@ func main() {
 }
 
 type ctxKey string
+type ctxData struct {
+	ID   int64
+	Role string
+}
 
 // Middleware handler
 func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), secure ...interface{}) {
@@ -70,7 +73,7 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
-		isValid, id := validateJWT(w, r)
+		isValid, id, role := validateJWT(w, r)
 
 		// JWT validation handler
 		if len(secure) > 0 && !isValid {
@@ -78,9 +81,13 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 			return
 		}
 
-		// Save userID to context
-		var key ctxKey = "userID"
-		ctx := context.WithValue(r.Context(), key, id)
+		// Save userID and User Role to context
+		var data ctxData
+		data.ID = id
+		data.Role = role
+
+		var key ctxKey = "user"
+		ctx := context.WithValue(r.Context(), key, data)
 		req := r.WithContext(ctx)
 
 		// Error handler
