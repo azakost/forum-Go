@@ -445,7 +445,7 @@ func viewclaims(w http.ResponseWriter, r *http.Request) {
 
 func doneclaim(w http.ResponseWriter, r *http.Request) {
 	var claim struct {
-		ClaimID int64
+		ClaimID int64 `json:"claimID"`
 	}
 	readBody(r, &claim)
 	query := `UPDATE claims SET status = '0' WHERE claimId = $1`

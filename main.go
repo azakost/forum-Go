@@ -45,6 +45,7 @@ func main() {
 
 	endpoint("/api/claim", claim, "check JWT")
 	endpoint("/api/viewclaims", viewclaims, "check JWT")
+	endpoint("/api/doneclaim", doneclaim, "check JWT")
 
 	endpoint("/api/uploadava", uploadava, "check JWT")
 	endpoint("/api/uploadimg", uploadimg, "check JWT")
