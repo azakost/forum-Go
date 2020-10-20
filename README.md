@@ -17,7 +17,7 @@ User features:
 - [x] Write/update/delete comment
 - [x] Like/dislike post or comment
 - [x] Post or comment report
-- [ ] Avatar upload (place to folder and name by user id)
+- [x] Avatar upload
 - [ ] Post image upload (return as new url)
 
 Websocket features:
@@ -36,5 +36,5 @@ Admin features:
 Admin & Moderator features:
 - [x] User's post and comment edit
 - [x] Reports review
-- [ ] Report change status
+- [ ] Report status change
 - [ ] User suspension with due time

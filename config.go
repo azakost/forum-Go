@@ -8,6 +8,7 @@ const (
 	tokenLife    = time.Hour
 	tokenRefresh = tokenLife / 2
 	dbname       = "database.db"
+	avatarSize   = 2 * 1024 * 1024 // 2 mb
 )
 
 const initialQuery = `

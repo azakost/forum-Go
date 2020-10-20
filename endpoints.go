@@ -1,7 +1,11 @@
 package main
 
 import (
+	"io/ioutil"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -434,4 +438,58 @@ func viewclaims(w http.ResponseWriter, r *http.Request) {
 	sliceFromDB(&claims, query, nil)
 
 	returnJSON(claims, w)
+}
+
+func uploadava(w http.ResponseWriter, r *http.Request) {
+
+	file, fileHeader, formError := r.FormFile("avatar")
+	if formError != nil {
+		w.WriteHeader(400)
+		w.Write([]byte("invalid upload"))
+		return
+	}
+	defer file.Close()
+
+	// validate file size
+	fileSize := fileHeader.Size
+	if fileSize > avatarSize {
+		w.WriteHeader(400)
+		w.Write([]byte("file is to big"))
+		return
+	}
+
+	// validate file content
+	fileBytes, readError := ioutil.ReadAll(file)
+	if readError != nil {
+		w.WriteHeader(400)
+		w.Write([]byte("invalid file content"))
+		return
+	}
+
+	// validate file format
+	detectedFileType := http.DetectContentType(fileBytes)
+	switch detectedFileType {
+	case "image/jpeg", "image/jpg":
+		break
+	default:
+		w.WriteHeader(400)
+		w.Write([]byte("wrong file format"))
+		return
+	}
+
+	fileName := strconv.FormatInt(ctx("user", r).(ctxData).ID, 10)
+	fileEndings, filetypeError := mime.ExtensionsByType(detectedFileType)
+	err(filetypeError)
+
+	newPath := filepath.Join("./front/avatars", fileName+fileEndings[0])
+
+	// write file
+	newFile, createError := os.Create(newPath)
+	err(createError)
+	defer newFile.Close()
+	_, writeError := newFile.Write(fileBytes)
+
+	if writeError != nil || newFile.Close() != nil {
+		err(writeError)
+	}
 }
