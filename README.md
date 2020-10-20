@@ -36,5 +36,5 @@ Admin features:
 Admin & Moderator features:
 - [x] User's post and comment edit
 - [x] Reports review
-- [ ] Report status change
+- [x] Report status change
 - [ ] User suspension with due time
