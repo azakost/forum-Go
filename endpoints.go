@@ -422,15 +422,22 @@ func claim(w http.ResponseWriter, r *http.Request) {
 
 func viewclaims(w http.ResponseWriter, r *http.Request) {
 	var claims []struct {
-		ClaimID int64
-		Claimed int64
-		Type    string
-		TextID  int64
-		UserID  int64
-		Claim   string
+		ClaimID  int64
+		Claimed  int64
+		Type     string
+		TextID   int64
+		Username string
+		Claim    string
 	}
 
-	query := `SELECT claimId, CAST(strftime('%s', claimed) AS INT), type, textId, userId, claim FROM claims`
+	query := `SELECT 
+				claimId, 
+				CAST(strftime('%s', claimed) AS INT), 
+				type, 
+				textId, 
+				(SELECT username FROM users WHERE userId = c.userId), 
+				claim 
+			FROM claims c WHERE status > '0'`
 	sliceFromDB(&claims, query, nil)
 
 	returnJSON(claims, w)
