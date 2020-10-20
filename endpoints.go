@@ -443,6 +443,15 @@ func viewclaims(w http.ResponseWriter, r *http.Request) {
 	returnJSON(claims, w)
 }
 
+func doneclaim(w http.ResponseWriter, r *http.Request) {
+	var claim struct {
+		ClaimID int64
+	}
+	readBody(r, &claim)
+	query := `UPDATE claims SET status = '0' WHERE claimId = $1`
+	err(insert(query, false, claim.ClaimID))
+}
+
 func uploadava(w http.ResponseWriter, r *http.Request) {
 	filename := strconv.FormatInt(ctx("user", r).(ctxData).ID, 10)
 	path, uploadError := uploadFile(r, "avatar", "/avatars", filename, "image/jpeg", "image/jpg")
