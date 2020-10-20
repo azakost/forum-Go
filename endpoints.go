@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"net/smtp"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +48,20 @@ func register(w http.ResponseWriter, r *http.Request) {
 		returnJSON(validity, w)
 		return
 	}
+
+	// Send email for verification
+	auth := smtp.PlainAuth("", smtpUsername, smtpPassword, smtpServer)
+
+	to := []string{"azakost@gmail.com"}
+	msg := []byte("To: azakost@gmail.com\r\n" +
+		"Subject: Why are you not using Mailtrap yet?\r\n" +
+		"\r\n" +
+		"Here’s the space for our great sales pitch\r\n")
+	err := smtp.SendMail(smtpServer+":"+smtpPort, auth, "alem@school.io", to, msg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 func login(w http.ResponseWriter, r *http.Request) {

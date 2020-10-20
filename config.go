@@ -9,6 +9,10 @@ const (
 	tokenRefresh = tokenLife / 2
 	dbname       = "database.db"
 	avatarSize   = 2 * 1024 * 1024 // 2 mb
+	smtpServer   = "in-v3.mailjet.com"
+	smtpPort     = "587" // or 25
+	smtpUsername = "f6eb2bd70322468de3098e772812fdab"
+	smtpPassword = "56251db797e440f70c2996a1b8beb49c"
 )
 
 const initialQuery = `
