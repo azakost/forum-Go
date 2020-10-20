@@ -18,7 +18,7 @@ User features:
 - [x] Like/dislike post or comment
 - [x] Post or comment report
 - [x] Avatar upload
-- [ ] Post image upload (return as new url)
+- [x] Post image upload (return as new url)
 
 Websocket features:
 - [ ] Posts live-apperance

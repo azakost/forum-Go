@@ -129,32 +129,36 @@ func getCats(c string) []interface{} {
 	return res
 }
 
-func uploadFile(r *http.Request, formname, path, filename string) error {
-	file, fileHeader, formError := r.FormFile("avatar")
+func uploadFile(r *http.Request, formname, path, filename string, formats ...string) (string, error) {
+	file, fileHeader, formError := r.FormFile(formname)
 	if formError != nil {
-		return errors.New("invalid file upload")
+		return "", errors.New("invalid file upload")
 	}
 	defer file.Close()
 
 	// validate file size
 	fileSize := fileHeader.Size
 	if fileSize > avatarSize {
-		return errors.New("invalid file size")
+		return "", errors.New("invalid file size")
 	}
 
 	// validate file content
 	fileBytes, readError := ioutil.ReadAll(file)
 	if readError != nil {
-		return errors.New("invalid file content")
+		return "", errors.New("invalid file content")
 	}
 
 	// validate file format
 	detectedFileType := http.DetectContentType(fileBytes)
-	switch detectedFileType {
-	case "image/jpeg", "image/jpg":
-		break
-	default:
-		return errors.New("wrong file format")
+	valid := false
+	for _, x := range formats {
+		if detectedFileType == x {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return "", errors.New("wrong file format")
 	}
 
 	fileEndings, filetypeError := mime.ExtensionsByType(detectedFileType)
@@ -171,5 +175,5 @@ func uploadFile(r *http.Request, formname, path, filename string) error {
 	if writeError != nil || newFile.Close() != nil {
 		err(writeError)
 	}
-	return nil
+	return path + "/" + filename + fileEndings[0], nil
 }

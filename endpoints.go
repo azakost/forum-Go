@@ -438,14 +438,22 @@ func viewclaims(w http.ResponseWriter, r *http.Request) {
 
 func uploadava(w http.ResponseWriter, r *http.Request) {
 	filename := strconv.FormatInt(ctx("user", r).(ctxData).ID, 10)
-	uploadError := uploadFile(r, "avatar", "/avatars", filename)
+	path, uploadError := uploadFile(r, "avatar", "/avatars", filename, "image/jpeg", "image/jpg")
 	if uploadError != nil {
-		http.Error(w, http.StatusText(400), 400)
+		w.WriteHeader(400)
+		w.Write([]byte(uploadError.Error()))
 		return
 	}
-
+	w.Write([]byte(path))
 }
 
 func uploadimg(w http.ResponseWriter, r *http.Request) {
-
+	filename := strconv.FormatInt(time.Now().Unix(), 10)
+	path, uploadError := uploadFile(r, "image", "/images", filename, "image/jpeg", "image/jpg", "image/gif", "image/png")
+	if uploadError != nil {
+		w.WriteHeader(400)
+		w.Write([]byte(uploadError.Error()))
+		return
+	}
+	w.Write([]byte(path))
 }
