@@ -2,6 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"mime"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 	"unicode"
@@ -123,4 +127,49 @@ func getCats(c string) []interface{} {
 		}
 	}
 	return res
+}
+
+func uploadFile(r *http.Request, formname, path, filename string) error {
+	file, fileHeader, formError := r.FormFile("avatar")
+	if formError != nil {
+		return errors.New("invalid file upload")
+	}
+	defer file.Close()
+
+	// validate file size
+	fileSize := fileHeader.Size
+	if fileSize > avatarSize {
+		return errors.New("invalid file size")
+	}
+
+	// validate file content
+	fileBytes, readError := ioutil.ReadAll(file)
+	if readError != nil {
+		return errors.New("invalid file content")
+	}
+
+	// validate file format
+	detectedFileType := http.DetectContentType(fileBytes)
+	switch detectedFileType {
+	case "image/jpeg", "image/jpg":
+		break
+	default:
+		return errors.New("wrong file format")
+	}
+
+	fileEndings, filetypeError := mime.ExtensionsByType(detectedFileType)
+	err(filetypeError)
+
+	newPath := filepath.Join("./front"+path, filename+fileEndings[0])
+
+	// write file
+	newFile, createError := os.Create(newPath)
+	err(createError)
+	defer newFile.Close()
+	_, writeError := newFile.Write(fileBytes)
+
+	if writeError != nil || newFile.Close() != nil {
+		err(writeError)
+	}
+	return nil
 }
