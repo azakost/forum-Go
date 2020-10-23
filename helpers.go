@@ -159,6 +159,10 @@ func uploadFile(r *http.Request, formname, path, filename string, formats ...str
 	fileEndings, filetypeError := mime.ExtensionsByType(detectedFileType)
 	err(filetypeError)
 
+	if fileEndings[0] == ".jpeg" {
+		fileEndings[0] = ".jpg"
+	}
+
 	newPath := filepath.Join("./front"+path, filename+fileEndings[0])
 
 	// write file
