@@ -7,15 +7,6 @@ import (
 	"time"
 )
 
-type smtpServer struct {
-	host string
-	port string
-}
-
-func (s *smtpServer) Address() string {
-	return s.host + ":" + s.port
-}
-
 func register(w http.ResponseWriter, r *http.Request) {
 
 	// Struct request body
@@ -69,33 +60,35 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	// Get encrypted password from DB and user ID
 	var creds []struct {
+		Username string
+		Fullname string
 		Password string
 		UserID   int64
 		Role     string
 	}
 
-	query := `SELECT password, userId, role FROM users WHERE username = $1`
+	query := `SELECT username, fullname, password, userId, role FROM users WHERE username = $1`
 	sliceFromDB(&creds, query, nil, login.Username)
 
-	// If no such user in DB
-	if len(creds) == 0 {
-		http.Error(w, http.StatusText(404), 404)
-		return
-	}
-
-	if len(creds) > 1 {
-		http.Error(w, http.StatusText(500), 500)
-		return
-	}
-
-	// Check passwors
-	if !cryptIsValid(creds[0].Password, login.Password) {
+	// If no such user in DB or password is wrong
+	if len(creds) == 0 || !cryptIsValid(creds[0].Password, login.Password) {
 		http.Error(w, http.StatusText(403), 403)
 		return
 	}
 
 	// Set new JWT if password correct
 	setJWT(creds[0].UserID, creds[0].Role, w)
+
+	// Return creds as json
+	var user struct {
+		UserID   int64  `json:"userID"`
+		Username string `json:"username"`
+		Fullname string `json:"fullname"`
+	}
+	user.UserID = creds[0].UserID
+	user.Username = creds[0].Username
+	user.Fullname = creds[0].Fullname
+	returnJSON(user, w)
 
 }
 
@@ -467,10 +460,10 @@ func uploadava(w http.ResponseWriter, r *http.Request) {
 	path, uploadError := uploadFile(r, "avatar", "/avatars", filename, "image/jpeg", "image/jpg")
 	if uploadError != nil {
 		w.WriteHeader(400)
-		w.Write([]byte(uploadError.Error()))
 		return
 	}
-	w.Write([]byte(path))
+	_, writeError := w.Write([]byte(path))
+	err(writeError)
 }
 
 func uploadimg(w http.ResponseWriter, r *http.Request) {
@@ -478,8 +471,8 @@ func uploadimg(w http.ResponseWriter, r *http.Request) {
 	path, uploadError := uploadFile(r, "image", "/images", filename, "image/jpeg", "image/jpg", "image/gif", "image/png")
 	if uploadError != nil {
 		w.WriteHeader(400)
-		w.Write([]byte(uploadError.Error()))
 		return
 	}
-	w.Write([]byte(path))
+	_, writeError := w.Write([]byte(path))
+	err(writeError)
 }
