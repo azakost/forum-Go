@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,32 +19,47 @@ func register(w http.ResponseWriter, r *http.Request) {
 	}
 	readBody(r, &reg)
 
-	// Create validation report
-	var validity report
+	regcheck := func(s, regex string) bool {
+		return !regexp.MustCompile(regex).MatchString(s)
+	}
 
-	// Regex validation of creds
-	validity.regcheck("wrong username format", reg.Username, `^[a-zA-Z0-9_]{3,10}$`)
-	validity.regcheck("wrong email format", reg.Email, `^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
-	validity.regcheck("wrong fullname format", reg.Fullname, `^.{3,20}$`)
-	validity.regcheck("short password", reg.Password, `^.{6,}$`)
+	errcheck := func(e error, ex string) bool {
+		return strings.Contains(e.Error(), ex)
+	}
+
+	// Create new validation report
+	type report struct {
+		UsernameFormat bool
+		FullnameFormat bool
+		EmailFormat    bool
+		PasswordFormat bool
+		EmailExist     bool
+		UsernameExist  bool
+	}
+	var valid report
+
+	valid.UsernameFormat = regcheck(reg.Username, `^[a-zA-Z0-9_]{3,10}$`)
+	valid.EmailFormat = regcheck(reg.Email, `^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	valid.FullnameFormat = regcheck(reg.Fullname, `^.{3,20}$`)
+	valid.PasswordFormat = regcheck(reg.Password, `^.{6,}$`)
 
 	// Encrypt password for safe storage
 	pass := encrypt(reg.Password)
 
 	// Making conditional insert - if data is valid insert will be commited
 	query := `INSERT INTO users(email, username, fullname, password) values( $1, $2, $3, $4)`
-	rollback := insert(query, len(validity) > 0, reg.Email, reg.Username, reg.Fullname, pass)
+	rollback := insert(query, (report{}) != valid, reg.Email, reg.Username, reg.Fullname, pass)
 
 	// If conditional insert returned error - insert will rollback
 	if rollback != nil {
 
 		// Validate Email and Username for case of uniqness in DB
-		validity.errcheck("email already exist", rollback, "users.email")
-		validity.errcheck("user already exist", rollback, "users.user")
+		valid.EmailExist = errcheck(rollback, "users.email")
+		valid.UsernameExist = errcheck(rollback, "users.user")
 
 		// Return Error with validation report
 		w.WriteHeader(400)
-		returnJSON(validity, w)
+		returnJSON(valid, w)
 		return
 	}
 

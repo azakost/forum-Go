@@ -38,12 +38,6 @@ func (rep *report) regcheck(col, str, regex string) {
 	}
 }
 
-func (rep *report) errcheck(col string, err error, str string) {
-	if strings.Contains(err.Error(), str) {
-		*rep = append(*rep, col)
-	}
-}
-
 func (rep *report) logcheck(col string, log bool) {
 	if log {
 		*rep = append(*rep, col)

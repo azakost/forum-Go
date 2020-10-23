@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"os"
 	"reflect"
 
@@ -47,6 +48,9 @@ func insert(query string, condition bool, args ...interface{}) error {
 	_, execError := tx.Exec(query, args...)
 	if execError != nil || condition {
 		err(tx.Rollback())
+		if execError == nil {
+			return errors.New("Validity error")
+		}
 		return execError
 	}
 	err(tx.Commit())
