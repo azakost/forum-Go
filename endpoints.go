@@ -194,7 +194,7 @@ func posts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Pagination params
-	pageSize := 10
+	pageSize := 100
 	page, atoiError := strconv.Atoi(r.FormValue("page"))
 	if atoiError != nil || page <= 0 {
 		page = 1
@@ -211,6 +211,7 @@ func posts(w http.ResponseWriter, r *http.Request) {
 		Text       string
 		Likes      int64
 		Dislikes   int64
+		Comments   int64
 		Reaction   string
 		Categories []interface{}
 	}
@@ -224,6 +225,7 @@ func posts(w http.ResponseWriter, r *http.Request) {
 		p.text,
 		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'like') AS likes,
 		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'dislike') AS dislikes,
+		(SELECT COUNT(*) FROM comments c WHERE c.postId = p.postId) AS Comments,
 		COALESCE((SELECT reaction FROM postReactions r WHERE r.postId = p.postId AND r.userId = $1), "idle"),
 		p.categories
 	FROM posts p WHERE 
