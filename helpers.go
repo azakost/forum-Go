@@ -38,12 +38,6 @@ func (rep *report) regcheck(col, str, regex string) {
 	}
 }
 
-func (rep *report) logcheck(col string, log bool) {
-	if log {
-		*rep = append(*rep, col)
-	}
-}
-
 func returnJSON(d interface{}, w http.ResponseWriter) {
 	js, jsonError := json.Marshal(d)
 	err(jsonError)
@@ -71,20 +65,17 @@ func addCookie(w http.ResponseWriter, name, value string, exp time.Time) {
 	http.SetCookie(w, &cookie)
 }
 
-func processCategories(validity *report, cats []int64) string {
-	validity.logcheck("too much cats", len(cats) > 3)
-	validity.logcheck("no cats", len(cats) == 0)
+func processCategories(cats []int64) (string, error) {
 	var strcats string
 	for _, cat := range cats {
 		check := "SELECT categoryId FROM categories WHERE categoryId = ?"
 		inDB := isInDB(check, cat)
 		if !inDB {
-			validity.logcheck("no such category!", true)
-			break
+			return "", errors.New("No such category!")
 		}
 		strcats += "\"" + strconv.FormatInt(cat, 10) + "\""
 	}
-	return strcats
+	return strcats, nil
 }
 
 func reqQuery(name string, r *http.Request) string {
@@ -159,11 +150,12 @@ func uploadFile(r *http.Request, formname, path, filename string, formats ...str
 	fileEndings, filetypeError := mime.ExtensionsByType(detectedFileType)
 	err(filetypeError)
 
+	format := fileEndings[0]
 	if fileEndings[0] == ".jpeg" {
-		fileEndings[0] = ".jpg"
+		format = ".jpg"
 	}
 
-	newPath := filepath.Join("./front"+path, filename+fileEndings[0])
+	newPath := filepath.Join("./front"+path, filename+format)
 
 	// write file
 	newFile, createError := os.Create(newPath)
@@ -175,4 +167,8 @@ func uploadFile(r *http.Request, formname, path, filename string, formats ...str
 		err(writeError)
 	}
 	return path + "/" + filename + fileEndings[0], nil
+}
+
+func regcheck(s, regex string) bool {
+	return !regexp.MustCompile(regex).MatchString(s)
 }

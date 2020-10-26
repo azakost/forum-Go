@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,10 +17,6 @@ func register(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	readBody(r, &reg)
-
-	regcheck := func(s, regex string) bool {
-		return !regexp.MustCompile(regex).MatchString(s)
-	}
 
 	errcheck := func(e error, ex string) bool {
 		return strings.Contains(e.Error(), ex)
@@ -129,7 +124,7 @@ func writepost(w http.ResponseWriter, r *http.Request) {
 	uid := ctx("user", r).(ctxData).ID
 
 	var e error
-	if post.Status == 0 && post.Title == "" {
+	if post.Status == 0 && post.Title == "" && post.PostID != 0 {
 		upd := `UPDATE posts SET status = $1 WHERE postId = $2 AND (userId = $3 OR $4 = 'admin' OR $4 = 'moderator')`
 		e = insert(upd, false, post.Status, post.PostID, uid, role)
 		err(e)
@@ -137,12 +132,27 @@ func writepost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create validation report
-	var validity report
-	validity.regcheck("wrong title", strings.TrimSpace(post.Title), `^.{3,140}$`)
-	validity.logcheck("wrong status", (post.Status > 2 || post.Status < 0) && post.PostID != 0)
-	cats := processCategories(&validity, post.Categories)
+	type report struct {
+		Title         bool
+		Status        bool
+		CategoriesNum bool
+		CategoriesVal bool
+	}
 
-	if len(validity) > 0 {
+	var validity report
+	validity.Title = regcheck(strings.TrimSpace(post.Title), `^.{3,140}$`)
+	validity.Status = (post.Status > 2 || post.Status < 0) && post.PostID != 0
+	validity.CategoriesNum = len(post.Categories) > 3 || len(post.Categories) == 0
+
+	if (report{}) != validity {
+		w.WriteHeader(400)
+		returnJSON(validity, w)
+		return
+	}
+
+	cats, catsError := processCategories(post.Categories)
+	if catsError != nil {
+		validity.CategoriesVal = true
 		w.WriteHeader(400)
 		returnJSON(validity, w)
 		return
