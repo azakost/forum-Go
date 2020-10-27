@@ -95,5 +95,17 @@ INSERT INTO categories(name, description)
 		'JavaScript is a mother of all web devs!'
 	);	
 
+INSERT INTO categories(name, description)
+	values(
+		'bash',
+		'Bashers gonna bash!!'
+	);
+
+INSERT INTO categories(name, description)
+	values(
+		'rust',
+		'Once rust not pidorust!'
+	);	
+
 
 `

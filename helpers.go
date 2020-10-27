@@ -166,7 +166,7 @@ func uploadFile(r *http.Request, formname, path, filename string, formats ...str
 	if writeError != nil || newFile.Close() != nil {
 		err(writeError)
 	}
-	return path + "/" + filename + fileEndings[0], nil
+	return path + "/" + filename + format, nil
 }
 
 func regcheck(s, regex string) bool {
