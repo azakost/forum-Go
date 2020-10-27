@@ -151,7 +151,7 @@ func uploadFile(r *http.Request, formname, path, filename string, formats ...str
 	err(filetypeError)
 
 	format := fileEndings[0]
-	if fileEndings[0] == ".jpeg" {
+	if format == ".jpeg" || format == ".jpe" {
 		format = ".jpg"
 	}
 
