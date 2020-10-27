@@ -378,7 +378,7 @@ func deletecategory(w http.ResponseWriter, r *http.Request) {
 
 func categories(w http.ResponseWriter, r *http.Request) {
 	var cat []struct {
-		CategoryID  int64  `json:"categoryID"`
+		CategoryID  int64  `json:"id"`
 		Name        string `json:"name"`
 		Description string `json:"description"`
 	}
