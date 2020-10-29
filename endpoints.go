@@ -203,17 +203,16 @@ func posts(w http.ResponseWriter, r *http.Request) {
 
 	// Select RAW slice data from DB
 	var postDB []struct {
-		PostID     int64
-		Posted     int64
-		AuthorID   int64
-		Username   string
-		Title      string
-		Text       string
-		Likes      int64
-		Dislikes   int64
-		Comments   int64
-		Reaction   string
-		Categories []interface{}
+		PostID     int64         `json:"pid"`
+		Posted     int64         `json:"created"`
+		AuthorID   int64         `json:"uid"`
+		Username   string        `json:"username"`
+		Title      string        `json:"text"`
+		Likes      int64         `json:"likes"`
+		Dislikes   int64         `json:"dislikes"`
+		Comments   int64         `json:"comments"`
+		Reaction   string        `json:"reaction"`
+		Categories []interface{} `json:"categories"`
 	}
 	query := `
 	SELECT 
@@ -222,7 +221,6 @@ func posts(w http.ResponseWriter, r *http.Request) {
 		p.userId,
 		(SELECT username FROM users u WHERE u.userId = p.userId),
 		p.title, 
-		p.text,
 		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'like') AS likes,
 		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'dislike') AS dislikes,
 		(SELECT COUNT(*) FROM comments c WHERE c.postId = p.postId) AS Comments,
@@ -241,17 +239,52 @@ func posts(w http.ResponseWriter, r *http.Request) {
 	returnJSON(postDB, w)
 }
 
+func post(w http.ResponseWriter, r *http.Request) {
+
+	// Get request query params
+	postID := r.FormValue("postID")
+
+	// Select RAW slice data from DB
+	var postDB []struct {
+		PostID     int64
+		AuthorID   int64
+		Username   string
+		Title      string
+		Text       string
+		Reaction   string
+		Likes      int64
+		Dislikes   int64
+		Categories []interface{}
+	}
+	query := `
+	SELECT 
+		p.postId,
+		p.userId,
+		(SELECT username FROM users u WHERE u.userId = p.userId),
+		p.title, 
+		p.text,
+		COALESCE((SELECT reaction FROM postReactions r WHERE r.postId = p.postId AND r.userId = $1), "idle"),
+		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'like') AS likes,
+		(SELECT COUNT(*) FROM postReactions r WHERE r.postId = p.postId AND reaction = 'dislike') AS dislikes,
+		p.categories
+	FROM posts p WHERE p.status > '0' AND p.postId = $2`
+	uid := ctx("user", r).(ctxData).ID
+	sliceFromDB(&postDB, query, getCats, uid, postID)
+	returnJSON(postDB[0], w)
+
+}
+
 func comments(w http.ResponseWriter, r *http.Request) {
 	uid := ctx("user", r).(ctxData).ID
 	var comments []struct {
-		CommentID int64
-		Commented int64
-		AuthorID  int64
-		Username  string
-		Comment   string
-		Like      int64
-		Dislike   int64
-		Reaction  string
+		CommentID int64  `json:"cid"`
+		Commented int64  `json:"created"`
+		AuthorID  int64  `json:"uid"`
+		Username  string `json:"username"`
+		Comment   string `json:"text"`
+		Like      int64  `json:"likes"`
+		Dislike   int64  `json:"dislikes"`
+		Reaction  string `json:"reaction"`
 	}
 	query := `
 	SELECT 
@@ -264,7 +297,7 @@ func comments(w http.ResponseWriter, r *http.Request) {
 		(SELECT COUNT(*) FROM commentReactions r WHERE r.commentId = c.commentId AND reaction = 'dislike'),
 		COALESCE((SELECT reaction FROM commentReactions r WHERE r.commentId = c.commentId AND r.userId = $1), "idle")
 	FROM comments c
-	WHERE c.status > '0' AND c.postId = $2`
+	WHERE c.status > '0' AND c.postId = $2 ORDER BY commented DESC`
 
 	sliceFromDB(&comments, query, nil, uid, r.FormValue("postID"))
 	returnJSON(comments, w)
@@ -315,15 +348,18 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 	var id int64
 	var query string
 	var upd string
+
 	reactionValid := react.Reaction == "like" || react.Reaction == "dislike" || react.Reaction == "idle"
 	if react.PostID > 0 && react.CommentID == 0 && reactionValid {
 		id = react.PostID
 		query = `INSERT INTO postReactions(reaction, postId, userId) VALUES ($1, (SELECT postId FROM posts WHERE postId = $2), $3)`
-		upd = `UPDATE postReactions SET reaction = $1 WHERE postId = $2 AND userId = $3`
+		upd = `UPDATE postReactions SET reaction = (CASE WHEN reaction = $1 THEN 'idle' ELSE $1 END) WHERE postId = $2 AND userId = $3`
+
 	} else if react.PostID == 0 && react.CommentID > 0 && reactionValid {
 		id = react.CommentID
 		query = `INSERT INTO commentReactions(reaction, commentId, userId) VALUES ($1, (SELECT commentId FROM comments WHERE commentId = $2), $3)`
-		upd = `UPDATE commentReactions SET reaction = $1 WHERE commentId = $2 AND userId = $3`
+		upd = `UPDATE commentReactions SET reaction = (CASE WHEN reaction = $1 THEN 'idle' ELSE $1 END) WHERE commentId = $2 AND userId = $3`
+
 	} else {
 		http.Error(w, http.StatusText(400), 400)
 		return
@@ -333,6 +369,7 @@ func reaction(w http.ResponseWriter, r *http.Request) {
 	if rollback != nil {
 		err(insert(upd, false, react.Reaction, id, uid))
 	}
+
 }
 
 func updcategory(w http.ResponseWriter, r *http.Request) {

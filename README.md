@@ -1,11 +1,12 @@
 # Forum for Alem Community
 
 User features:
+
 - [x] Registration with encrypted store of passwords in DB
 - [ ] Email Verification
 - [x] Login with JWT issue & logout with JWT removal
 - [ ] Login/Registration using GitHub
-- [x] Get posts details [author, title, text, timestamp, categories, likes, dislikes]: 
+- [x] Get posts details [author, title, text, timestamp, categories, likes, dislikes]:
 - [x] - by category
 - [x] - by status
 - [x] - by user id
@@ -19,8 +20,10 @@ User features:
 - [x] Post or comment report
 - [x] Avatar upload
 - [x] Post image upload (return as new url)
+- [ ] Single user profile view (likes, dislikes, posts, comments)
 
 Websocket features:
+
 - [ ] Posts live-apperance
 - [ ] Comments live-apperance
 - [ ] Likes/Dislikes count live-changing
@@ -28,12 +31,14 @@ Websocket features:
 - [ ] Notifications
 
 Admin features:
+
 - [x] Category creation & edit
 - [x] Category delete
 - [x] List all users
 - [x] Changing user's role
 
 Admin & Moderator features:
+
 - [x] User's post and comment edit
 - [x] Reports review
 - [x] Report status change

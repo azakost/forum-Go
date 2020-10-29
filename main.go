@@ -30,6 +30,7 @@ func main() {
 
 	// Get all posts or sertain post by ID (also include all post filtering)
 	endpoint("/api/posts", posts)
+	endpoint("/api/post", post)
 
 	// Write or update post
 	endpoint("/api/writepost", writepost, "check JWT")
