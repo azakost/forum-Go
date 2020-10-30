@@ -320,21 +320,19 @@ func writecomment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var validity report
-	validity.regcheck("too short comment", strings.TrimSpace(comment.Comment), `^.{2,}$`)
-
-	if len(validity) > 0 {
+	if strings.TrimSpace(comment.Comment) == "" {
 		w.WriteHeader(400)
-		returnJSON(validity, w)
 		return
 	}
 
+	newComment := strings.ReplaceAll(comment.Comment, "\n", "<br>")
+
 	if comment.CommentID == 0 {
 		ins := `INSERT INTO comments(postId, comment, userId) VALUES ((SELECT postId FROM posts WHERE postId = $1), $2, $3)`
-		err(insert(ins, false, comment.PostID, comment.Comment, uid))
+		err(insert(ins, false, comment.PostID, newComment, uid))
 	} else {
 		upd := `UPDATE comments SET comment = $1 WHERE commentId= $2 AND (userId = $3 OR $4 = 'admin' OR $4 = 'moderator')`
-		err(insert(upd, false, comment.Comment, comment.CommentID, uid, role))
+		err(insert(upd, false, newComment, comment.CommentID, uid, role))
 	}
 }
 

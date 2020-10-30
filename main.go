@@ -26,7 +26,7 @@ func main() {
 	// Our API endpoints
 	endpoint("/api/register", register)
 	endpoint("/api/login", login)
-	endpoint("/api/logout", logout, "check JWT")
+	endpoint("/api/logout", logout)
 
 	// Get all posts or sertain post by ID (also include all post filtering)
 	endpoint("/api/posts", posts)
