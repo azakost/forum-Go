@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -68,6 +69,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	readBody(r, &login)
+
+	fmt.Println(login)
 
 	// Get encrypted password from DB and user ID
 	var creds []struct {

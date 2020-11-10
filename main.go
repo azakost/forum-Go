@@ -82,12 +82,17 @@ func endpoint(path string, page func(w http.ResponseWriter, r *http.Request), se
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
-		isValid, id, role := validateJWT(w, r)
+		var isValid bool
+		var role string
+		var id int64
+		if len(secure) > 0 {
+			isValid, id, role = validateJWT(w, r)
 
-		// JWT validation handler
-		if len(secure) > 0 && !isValid {
-			http.Error(w, http.StatusText(403), 403)
-			return
+			// JWT validation handler
+			if !isValid {
+				http.Error(w, http.StatusText(403), 403)
+				return
+			}
 		}
 
 		// Save userID and User Role to context

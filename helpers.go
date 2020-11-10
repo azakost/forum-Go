@@ -41,7 +41,7 @@ func (rep *report) regcheck(col, str, regex string) {
 func returnJSON(d interface{}, w http.ResponseWriter) {
 	js, jsonError := json.Marshal(d)
 	err(jsonError)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_, writeError := w.Write(js)
 	err(writeError)
 }
