@@ -1,5 +1,11 @@
 # Forum for Alem Community
 
+
+## How to run
+```
+go run .
+```
+
 User features:
 
 - [x] Registration with encrypted store of passwords in DB
